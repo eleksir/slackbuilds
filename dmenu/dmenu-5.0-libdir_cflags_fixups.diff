@@ -1,0 +1,26 @@
+diff -ruNp dmenu-5.0/config.mk dmenu-5.0.new/config.mk
+--- dmenu-5.0/config.mk	2020-09-02 19:37:07.000000000 +0300
++++ dmenu-5.0.new/config.mk	2022-02-05 18:45:05.925753731 +0300
+@@ -4,6 +4,7 @@ VERSION = 5.0
+ # paths
+ PREFIX = /usr/local
+ MANPREFIX = $(PREFIX)/share/man
++LIBDIR = /usr/local/lib
+ 
+ X11INC = /usr/X11R6/include
+ X11LIB = /usr/X11R6/lib
+@@ -20,11 +21,12 @@ FREETYPEINC = /usr/include/freetype2
+ 
+ # includes and libs
+ INCS = -I$(X11INC) -I$(FREETYPEINC)
+-LIBS = -L$(X11LIB) -lX11 $(XINERAMALIBS) $(FREETYPELIBS)
++LIBS = -L${LIBDIR} -L${X11LIB} -lX11 ${XINERAMALIBS} ${FREETYPELIBS}
+ 
+ # flags
++OPTS ?= -Os
+ CPPFLAGS = -D_DEFAULT_SOURCE -D_BSD_SOURCE -D_XOPEN_SOURCE=700 -D_POSIX_C_SOURCE=200809L -DVERSION=\"$(VERSION)\" $(XINERAMAFLAGS)
+-CFLAGS   = -std=c99 -pedantic -Wall -Os $(INCS) $(CPPFLAGS)
++CFLAGS   = -std=c99 -pedantic -Wall ${OPTS} ${INCS} ${CPPFLAGS}
+ LDFLAGS  = $(LIBS)
+ 
+ # compiler and linker

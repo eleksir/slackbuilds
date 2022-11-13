@@ -1,0 +1,19 @@
+# HOW TO EDIT THIS FILE:
+# The "handy ruler" below makes it easier to edit a package description.
+# Line up the first '|' above the ':' following the base package name, and
+# the '|' on the right side marks the last column you can put a character in.
+# You must make exactly 11 lines for the formatting to be correct.  It's also
+# customary to leave one space after the ':' except on otherwise blank lines.
+
+     |-----handy-ruler------------------------------------------------------|
+gitea: gitea (A painless self-hosted Git service.)
+gitea:
+gitea: Gitea is a painless self-hosted Git service. It is similar to GitHub,
+gitea: Bitbucket, and GitLab. Gitea is a fork of Gogs.
+gitea: The goal of this project is to provide the easiest, fastest, and most
+gitea: painless way of setting up a self-hosted Git service. With Go, this
+gitea: can be done with an independent binary distribution across all
+gitea: platforms and architectures that Go supports. This support includes
+gitea: Linux, macOS, and Windows, on architectures like amd64, i386, ARM,
+gitea: PowerPC, and others.
+gitea: Home: https://gitea.io/

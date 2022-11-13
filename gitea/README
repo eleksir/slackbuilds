@@ -1,0 +1,25 @@
+Gitea - Git with a cup of tea
+
+Gitea is a painless self-hosted Git service. It is similar to GitHub,
+Bitbucket, and GitLab. Gitea is a fork of Gogs.
+
+The goal of this project is to provide the easiest, fastest, and most painless
+way of setting up a self-hosted Git service. With Go, this can be done with an
+independent binary distribution across all platforms and architectures that Go
+supports. This support includes Linux, macOS, and Windows, on architectures
+like amd64, i386, ARM, PowerPC, and others.
+
+In order to run gitea you should create user named git (for example) and
+adjust configs according selected username.
+
+groupadd -g 5001 git
+useradd -u 5001 -d /var/lib/git -s /bin/bash -g git git
+
+Git requires valid shell to operate properly, so in sshd config you should
+disable password-less login. Ideally allow only certificate authrized logins
+via ssh.
+
+Don't forget to set long enough random complex password for this user and
+forget it immediately.
+
+Also never give this user full sudo privileges.

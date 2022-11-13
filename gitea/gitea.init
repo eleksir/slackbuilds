@@ -1,0 +1,90 @@
+#!/bin/sh
+# Start/stop/restart Gitea daemon.
+
+. /etc/default/gitea
+
+__start() {
+	echo "Starting Gitea daemon:  /usr/sbin/gitea"
+
+	if [ -z $GITEAUSER ]; then
+		echo "Please set GITEAUSER in /etc/default/gitea to run gitea as, usually, git"
+		exit 1
+	fi
+
+	getent passwd $GITEAUSER 1>/dev/null 2>/dev/null
+
+	if [ $? != 0 ]; then
+		echo "User $GITEAUSER mentioned in /etc/default/gitea does not exist"
+		exit 1
+	fi
+
+	if [ -z "$PIDFILE" ]; then
+		echo "Please set PIDFILE in /etc/default/gitea"
+		exit 1
+	fi
+
+	PIDDIR=$(dirname $PIDFILE)
+
+	if [ ! -d $PIDDIR ]; then
+		mkdir -p $PIDDIR
+		chown -R $GITEAUSER $(dirname $PIDFILE)
+	fi
+
+	if [ -z "$CONFIG" ]; then
+		echo "Please set full path to gitea config in /etc/default/gitea"
+		exit 1
+	fi
+
+	if [ -f "$PIDFILE" ]; then
+		echo "Gitea daemon is already running as PID $(< ${PIDFILE}) " >&2
+		exit 3
+	fi
+
+	if [ ! -d $(dirname $LOG) ]; then
+		mkdir -p $(dirname $LOG)
+	fi
+
+	chown -R $GITEAUSER "$(dirname $LOG)"
+
+	daemonize -u $GITEAUSER -- /usr/sbin/gitea web \
+	          --config "$CONFIG" \
+	          --pid "$PIDFILE" \
+	          --custom-path "$CUSTOMDIR" \
+	          --work-path "$WORKDIR"
+}
+
+__stop() {
+	# do you know not so racy way here?
+	if [ -f "$PIDFILE" ]; then
+		kill $(cat ${PIDFILE})
+		rm -f "${PIDFILE}"
+	else
+		echo "Gitea daemon is not running"
+	fi
+}
+
+__restart() {
+	__stop
+	# pidfile being deleted immediately after sending SIGTERM to gitea process
+	# so we have to wait 'till it leave network socket alone
+	sleep 3
+	__start
+}
+
+
+case "$1" in
+	'start')
+		__start
+		;;
+	'stop')
+		__stop
+		;;
+	'restart')
+		__restart
+		;;
+	*)
+		echo "usage $0 start|stop|restart"
+		exit 2
+esac
+
+# vim: ft=sh noet ai ts=4 sw=4 sts=4:

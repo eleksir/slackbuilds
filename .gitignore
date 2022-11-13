@@ -1,0 +1,7 @@
+**.tar.xz
+**.tar.gz
+**.tar.bz2
+**.tar.lz
+**/slackmeta.pl
+**/upload.pl
+**/Geo*.dat.gz
