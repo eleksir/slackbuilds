@@ -1,0 +1,20 @@
+commit 4d2a8e66a3c62f47ca7b9e91c49afbeaa0cfc0b1
+Author: Érico Rolim <erico.erc@gmail.com>
+Date:   Sun Aug 16 15:12:45 2020 -0300
+
+    svlogd.c: Initialize all fields of sockaddr_in.
+    
+    http://skarnet.org/cgi-bin/archive.cgi?2:mss:1163:201602:gpiglpbjdemlioaeabbn
+
+diff --git a/src/svlogd.c b/src/svlogd.c
+index 006493e..8de65e0 100644
+--- a/runit-2.1.2/src/svlogd.c
++++ b/runit-2.1.2/src/svlogd.c
+@@ -430,6 +430,7 @@ unsigned int logdir_open(struct logdir *ld, const char *fn) {
+   ld->name =(char*)fn;
+   ld->ppid =0;
+   ld->match ='+';
++  ld->udpaddr.sin_family =AF_INET;
+   ld->udpaddr.sin_port =0;
+   ld->udponly =0;
+   while (! stralloc_copys(&ld->prefix, "")) pause_nomem();

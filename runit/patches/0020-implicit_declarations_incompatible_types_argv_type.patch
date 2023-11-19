@@ -1,0 +1,294 @@
+diff -ruNp admin/runit-2.1.2/src/chkshsgr.c admin.new/runit-2.1.2/src/chkshsgr.c
+--- admin/runit-2.1.2/src/chkshsgr.c	2020-11-04 16:53:26.482378214 +0300
++++ admin.new/runit-2.1.2/src/chkshsgr.c	2020-11-04 16:55:36.400785552 +0300
+@@ -2,6 +2,7 @@
+ 
+ #include <sys/types.h>
+ #include <unistd.h>
++#include <grp.h>
+ 
+ int main()
+ {
+diff -ruNp admin/runit-2.1.2/src/chpst.c admin.new/runit-2.1.2/src/chpst.c
+--- admin/runit-2.1.2/src/chpst.c	2020-11-04 16:53:35.608336583 +0300
++++ admin.new/runit-2.1.2/src/chpst.c	2020-11-04 16:57:34.848244408 +0300
+@@ -3,6 +3,7 @@
+ #include <sys/time.h>
+ #include <sys/resource.h>
+ #include <unistd.h>
++#include <grp.h>
+ #include "sgetopt.h"
+ #include "error.h"
+ #include "strerr.h"
+@@ -40,7 +41,7 @@ void usage() { strerr_die4x(100, "usage:
+ 
+ char *set_user =0;
+ char *env_user =0;
+-const char *argv0 =0;
++char *argv0 =0;
+ const char *env_dir =0;
+ unsigned int verbose =0;
+ unsigned int pgrp =0;
+@@ -258,14 +259,14 @@ void slimit() {
+ }
+ 
+ /* argv[0] */
+-void setuidgid(int, const char *const *);
+-void envuidgid(int, const char *const *);
+-void envdir(int, const char *const *);
+-void pgrphack(int, const char *const *);
+-void setlock(int, const char *const *);
+-void softlimit(int, const char *const *);
++void setuidgid(int, char *const *);
++void envuidgid(int, char *const *);
++void envdir(int, char *const *);
++void pgrphack(int, char *const *);
++void setlock(int, char *const *);
++void softlimit(int, char *const *);
+ 
+-int main(int argc, const char **argv) {
++int main(int argc, char **argv) {
+   int opt;
+   int i;
+   unsigned long ul;
+@@ -367,7 +368,7 @@ int main(int argc, const char **argv) {
+ void setuidgid_usage() {
+   strerr_die4x(100, "usage: ", progname, USAGE_SETUIDGID, "\n");
+ }
+-void setuidgid(int argc, const char *const *argv) {
++void setuidgid(int argc, char *const *argv) {
+   const char *account;
+ 
+   if (! (account =*++argv)) setuidgid_usage();
+@@ -380,7 +381,7 @@ void setuidgid(int argc, const char *con
+ void envuidgid_usage() {
+   strerr_die4x(100, "usage: ", progname, USAGE_ENVUIDGID, "\n");
+ }
+-void envuidgid(int argc, const char *const *argv) {
++void envuidgid(int argc, char *const *argv) {
+   const char *account;
+ 
+   if (! (account =*++argv)) envuidgid_usage();
+@@ -393,7 +394,7 @@ void envuidgid(int argc, const char *con
+ void envdir_usage() {
+   strerr_die4x(100, "usage: ", progname, USAGE_ENVDIR, "\n");
+ }
+-void envdir(int argc, const char *const *argv) {
++void envdir(int argc, char *const *argv) {
+   const char *dir;
+ 
+   if (! (dir =*++argv)) envdir_usage();
+@@ -406,7 +407,7 @@ void envdir(int argc, const char *const
+ void pgrphack_usage() {
+   strerr_die4x(100, "usage: ", progname, USAGE_PGRPHACK, "\n");
+ }
+-void pgrphack(int argc, const char *const *argv) {
++void pgrphack(int argc, char *const *argv) {
+   if (! *++argv) pgrphack_usage();
+   setsid();
+   pathexec(argv);
+@@ -416,7 +417,7 @@ void pgrphack(int argc, const char *cons
+ void setlock_usage() {
+   strerr_die4x(100, "usage: ", progname, USAGE_SETLOCK, "\n");
+ }
+-void setlock(int argc, const char *const *argv) {
++void setlock(int argc, char *const *argv) {
+   int opt;
+   unsigned int delay =0;
+   unsigned int x =0;
+@@ -450,7 +451,7 @@ void getlarg(long *l) {
+   if (optarg[scan_ulong(optarg, &ul)]) usage();
+   *l =ul;
+ }
+-void softlimit(int argc, const char *const *argv) {
++void softlimit(int argc, char *const *argv) {
+   int opt;
+   
+   while ((opt =getopt(argc,argv,"a:c:d:f:l:m:o:p:r:s:t:")) != opteof)
+diff -ruNp admin/runit-2.1.2/src/pathexec.h admin.new/runit-2.1.2/src/pathexec.h
+--- admin/runit-2.1.2/src/pathexec.h	2014-08-10 22:22:35.000000000 +0400
++++ admin.new/runit-2.1.2/src/pathexec.h	2020-11-04 16:54:40.572040232 +0300
+@@ -3,9 +3,9 @@
+ #ifndef PATHEXEC_H
+ #define PATHEXEC_H
+ 
+-extern void pathexec_run(const char *,const char * const *,const char * const *);
++extern void pathexec_run(const char *, char *const *, char *const *);
+ extern int pathexec_env(const char *,const char *);
+-extern void pathexec_env_run(const char *, const char * const *);
+-extern void pathexec(const char * const *);
++extern void pathexec_env_run(const char *, char *const *);
++extern void pathexec(char * const *);
+ 
+ #endif
+diff -ruNp admin/runit-2.1.2/src/pathexec_env.c admin.new/runit-2.1.2/src/pathexec_env.c
+--- admin/runit-2.1.2/src/pathexec_env.c	2014-08-10 22:22:35.000000000 +0400
++++ admin.new/runit-2.1.2/src/pathexec_env.c	2020-11-04 16:54:40.573040227 +0300
+@@ -22,9 +22,9 @@ int pathexec_env(const char *s,const cha
+   return stralloc_cat(&plus,&tmp);
+ }
+ 
+-void pathexec_env_run(const char *file, const char *const *argv)
++void pathexec_env_run(const char *file, char *const *argv)
+ {
+-  const char **e;
++  char **e;
+   unsigned int elen;
+   unsigned int i;
+   unsigned int j;
+@@ -40,7 +40,7 @@ void pathexec_env_run(const char *file,
+     if (!plus.s[i])
+       ++elen;
+ 
+-  e = (const char **) alloc((elen + 1) * sizeof(char *));
++  e = (char **) alloc((elen + 1) * sizeof(char *));
+   if (!e) return;
+ 
+   elen = 0;
+@@ -68,7 +68,7 @@ void pathexec_env_run(const char *file,
+   alloc_free(e);
+ }
+ 
+-void pathexec(const char *const *argv)
++void pathexec(char *const *argv)
+ {
+   return pathexec_env_run(*argv, argv);
+ }
+diff -ruNp admin/runit-2.1.2/src/pathexec_run.c admin.new/runit-2.1.2/src/pathexec_run.c
+--- admin/runit-2.1.2/src/pathexec_run.c	2020-11-04 16:53:22.330397154 +0300
++++ admin.new/runit-2.1.2/src/pathexec_run.c	2020-11-04 16:54:42.135033101 +0300
+@@ -9,7 +9,7 @@
+ 
+ static stralloc tmp;
+ 
+-void pathexec_run(const char *file,const char * const *argv,const char * const *envp)
++void pathexec_run(const char *file, char *const *argv, char *const *envp)
+ {
+   const char *path;
+   unsigned int split;
+diff -ruNp admin/runit-2.1.2/src/prot.c admin.new/runit-2.1.2/src/prot.c
+--- admin/runit-2.1.2/src/prot.c	2020-11-04 16:53:30.775358630 +0300
++++ admin.new/runit-2.1.2/src/prot.c	2020-11-04 16:59:33.850699916 +0300
+@@ -10,7 +10,7 @@
+ int prot_gid(gid_t gid)
+ {
+ #ifdef HASSHORTSETGROUPS
+-  short x[2];
++  gid_t x[2];
+   x[0] = gid; x[1] = 73; /* catch errors */
+   if (setgroups(1,x) == -1) return -1;
+ #else
+diff -ruNp admin/runit-2.1.2/src/runsvdir.c admin.new/runit-2.1.2/src/runsvdir.c
+--- admin/runit-2.1.2/src/runsvdir.c	2020-11-04 16:53:40.102316083 +0300
++++ admin.new/runit-2.1.2/src/runsvdir.c	2020-11-04 16:54:50.376995503 +0300
+@@ -63,7 +63,7 @@ void runsv(int no, char *name) {
+   }
+   if (pid == 0) {
+     /* child */
+-    const char *prog[3];
++    char *prog[3];
+ 
+     prog[0] ="runsv";
+     prog[1] =name;
+@@ -71,7 +71,7 @@ void runsv(int no, char *name) {
+     sig_uncatch(sig_hangup);
+     sig_uncatch(sig_term);
+     if (pgrp) setsid();
+-    pathexec_run(*prog, prog, (const char* const*)environ);
++    pathexec_run(*prog, prog, (char * const *)environ);
+     fatal("unable to start runsv ", name);
+   }
+   sv[no].pid =pid;
+diff -ruNp admin/runit-2.1.2/src/sgetopt.c admin.new/runit-2.1.2/src/sgetopt.c
+--- admin/runit-2.1.2/src/sgetopt.c	2014-08-10 22:22:35.000000000 +0400
++++ admin.new/runit-2.1.2/src/sgetopt.c	2020-11-04 16:54:52.310986681 +0300
+@@ -27,7 +27,7 @@ Documentation in sgetopt.3.
+ int opterr = 1;
+ const char *optprogname = 0;
+ 
+-int getopt(int argc,const char *const *argv,const char *opts)
++int getopt(int argc,char *const *argv,const char *opts)
+ {
+   int c;
+   const char *s;
+diff -ruNp admin/runit-2.1.2/src/sgetopt.h admin.new/runit-2.1.2/src/sgetopt.h
+--- admin/runit-2.1.2/src/sgetopt.h	2014-08-10 22:22:34.000000000 +0400
++++ admin.new/runit-2.1.2/src/sgetopt.h	2020-11-04 16:54:52.311986676 +0300
+@@ -16,7 +16,7 @@
+ 
+ #include "subgetopt.h"
+ 
+-extern int sgetoptmine(int,const char *const *,const char *);
++extern int sgetoptmine(int,char *const *,const char *);
+ extern int sgetopterr;
+ extern const char *sgetoptprogname;
+ 
+diff -ruNp admin/runit-2.1.2/src/subgetopt.c admin.new/runit-2.1.2/src/subgetopt.c
+--- admin/runit-2.1.2/src/subgetopt.c	2014-08-10 22:22:35.000000000 +0400
++++ admin.new/runit-2.1.2/src/subgetopt.c	2020-11-04 16:54:52.312986672 +0300
+@@ -16,7 +16,7 @@ const char *optarg = 0;
+ int optproblem = 0;
+ int optdone = SUBGETOPTDONE;
+ 
+-int sgopt(int argc,const char *const *argv,const char *opts)
++int sgopt(int argc,char *const *argv,const char *opts)
+ {
+   int c;
+   const char *s;
+diff -ruNp admin/runit-2.1.2/src/subgetopt.h admin.new/runit-2.1.2/src/subgetopt.h
+--- admin/runit-2.1.2/src/subgetopt.h	2014-08-10 22:22:35.000000000 +0400
++++ admin.new/runit-2.1.2/src/subgetopt.h	2020-11-04 16:54:52.312986672 +0300
+@@ -15,7 +15,7 @@
+ 
+ #define SUBGETOPTDONE -1
+ 
+-extern int subgetopt(int,const char *const *,const char *);
++extern int subgetopt(int,char *const *,const char *);
+ extern const char *subgetoptarg;
+ extern int subgetoptind;
+ extern int subgetoptpos;
+diff -ruNp admin/runit-2.1.2/src/sv.c admin.new/runit-2.1.2/src/sv.c
+--- admin/runit-2.1.2/src/sv.c	2020-11-04 16:53:54.756249234 +0300
++++ admin.new/runit-2.1.2/src/sv.c	2020-11-04 16:54:54.886974929 +0300
+@@ -283,7 +283,7 @@ int main(int argc, char **argv) {
+   lsb =(str_diff(progname, "sv"));
+   if ((x =env_get("SVDIR"))) varservice =x;
+   if ((x =env_get("SVWAIT"))) scan_ulong(x, &wait);
+-  while ((i =getopt(argc, (const char* const*)argv, "w:vV")) != opteof) {
++  while ((i =getopt(argc, (char* const*)argv, "w:vV")) != opteof) {
+     switch(i) {
+     case 'w': scan_ulong(optarg, &wait);
+     case 'v': verbose =1; break;
+diff -ruNp admin/runit-2.1.2/src/svlogd.c admin.new/runit-2.1.2/src/svlogd.c
+--- admin/runit-2.1.2/src/svlogd.c	2020-11-04 16:53:47.389282841 +0300
++++ admin.new/runit-2.1.2/src/svlogd.c	2020-11-04 16:54:56.968965432 +0300
+@@ -53,7 +53,7 @@ unsigned long linelen;
+ const char *replace ="";
+ char repl =0;
+ 
+-const char **fndir;
++char **fndir;
+ int fdwdir;
+ struct stat st;
+ stralloc sa;
+@@ -664,7 +664,7 @@ void logmatch(struct logdir *ld) {
+     i +=byte_chr(&ld->inst.s[i], ld->inst.len -i, 0);
+   }
+ }
+-int main(int argc, const char **argv) {
++int main(int argc, char **argv) {
+   int i;
+   int opt;
+ 
+diff -ruNp admin/runit-2.1.2/src/utmpset.c admin.new/runit-2.1.2/src/utmpset.c
+--- admin/runit-2.1.2/src/utmpset.c	2020-11-04 16:52:29.062640152 +0300
++++ admin.new/runit-2.1.2/src/utmpset.c	2020-11-04 16:54:59.851952280 +0300
+@@ -85,7 +85,7 @@ int wtmp_logout(const char *line) {
+   return(1);
+ }
+ 
+-int main (int argc, const char * const *argv, const char * const *envp) {
++int main (int argc, char * const *argv, char * const *envp) {
+   int opt;
+   int wtmp =0;
+ 

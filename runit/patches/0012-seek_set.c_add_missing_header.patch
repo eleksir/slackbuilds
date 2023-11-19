@@ -1,0 +1,18 @@
+commit 53bf22e68c36b2fc2281998f8311c7c73c17259c
+Author: Érico Rolim <erico.erc@gmail.com>
+Date:   Sun Aug 16 15:19:45 2020 -0300
+
+    seek_set.c: add missing header.
+
+diff --git a/src/seek_set.c b/src/seek_set.c
+index 19b8265..a1a36d0 100644
+--- a/runit-2.1.2/src/seek_set.c
++++ b/runit-2.1.2/src/seek_set.c
+@@ -1,6 +1,7 @@
+ /* Public domain. */
+ 
+ #include <sys/types.h>
++#include <unistd.h>
+ #include "seek.h"
+ 
+ #define SET 0 /* sigh */

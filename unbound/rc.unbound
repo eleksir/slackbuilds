@@ -1,0 +1,133 @@
+#!/bin/sh -e
+# Start/stop/restart/status unbound.
+
+PIDFILE=/run/unbound/unbound.pid
+VARDIR=/var/lib/unbound
+RUNDIR=/run/unbound
+DAEMON=/usr/sbin/unbound
+USER=unbound
+GROUP=unbound
+CONFDIR=/etc/unbound
+CONFIG=${CONFDIR}/unbound.conf
+
+# Start unbound:
+_start() {
+	echo "Starting Unbound"
+
+	# dunno dafuq, but let's repeat it as pointed in redhat script
+	if [ -f ${VARDIR}/root.anchor -a -f ${DAEMON}-anchor ]; then
+		sudo -u $USER ${DAEMON}-anchor -a ${VARDIR}/root.anchor -c ${CONFDIR}/icannbundle.pem
+	fi
+
+	# generate new control keys if they're missing
+	if [ ! -f ${VARDIR}/unbound_control.key ]; then
+		echo -n "Generating unbound control key and certificate: "
+		${DAEMON}-control-setup -d ${VARDIR}/ >/dev/null 2>&1
+		chown ${USER}:${GROUP} ${VARDIR}/unbound_*.{key,pem}
+		echo
+	fi
+
+	set +o errexit
+	${DAEMON}-checkconf $CONFIG >/dev/null 2>&1
+
+	if [ $? -ne 0 ]; then
+		set -e
+		$DAEMON-checkconf $CONFIG
+	fi
+
+	set -e
+
+	if [ ! -d $RUNDIR ]; then
+		install -dpm 0750 -o $USER -g $GROUP $RUNDIR
+	fi
+
+	if [ -f $PIDFILE ]; then
+		if [ $(stat --printf=%s $PIDFILE) != "0" ]; then
+			# try to guess if process noted in pidfile still alive
+			PID=$(cat $PIDFILE)
+
+			# Eh, file contains something -try to guess if its unbound or not
+			set +o errexit
+			PROCNAME="$(ps -p ${PID} -o comm= 2>/dev/null)"
+			set -e
+
+			if [ -z $PROCNAME ]; then
+				# looks like no such process
+				echo "Removing stall PID-file found at $PIDFILE"
+				rm -f $PIDFILE
+			elif [ $PROCNAME == "unbound" ]; then
+				echo "Unbound already running"
+				exit 1
+			else
+				# process exist, but have different name
+				echo "Removing stall PID-file found at $PIDFILE"
+				rm -f $PIDFILE
+			fi
+		fi
+	fi
+
+	set +o errexit
+	${DAEMON}-control start
+
+	if [ $? -ne 0 ]; then
+		$DAEMON -c $CONFIG
+		RET=$?
+
+		if [ $RET -ne 0 ]; then
+			echo "Something went wrong, unbound unable to start."
+			exit $RET
+		fi
+	fi
+}
+
+# Stop unbound:
+_stop() {
+	echo "Stopping Unbound"
+	set +o errexit
+	${DAEMON}-control stop >/dev/null 2>&1
+	RET=$?
+	set -e
+
+	if [ $RET -ne 0 ]; then
+		if [ -f $PIDFILE ]; then
+			if [ $(stat --printf=%s $PIDFILE) != "0" ]; then
+				kill $(cat $PIDFILE)
+
+				if [ -f $PIDFILE ]; then
+					rm -rf $PIDFILE
+				fi
+			else
+				echo "Unable to stop unbound"
+				exit 1
+			fi
+		fi
+	fi
+}
+
+# Restart unbound:
+_restart() {
+	_stop
+	sleep 1
+	_start
+}
+
+_status() {
+	${DAEMON}-control status
+}
+
+case "$1" in
+'start')
+	_start
+	;;
+'stop')
+	_stop
+	;;
+'restart')
+	_restart
+	;;
+'status')
+	_status
+	;;
+*)
+	echo "usage $0 start|stop|restart|status"
+esac

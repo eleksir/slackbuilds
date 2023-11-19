@@ -1,0 +1,18 @@
+commit ec0f605d5b385c6c230a10312697315e01dad217
+Author: Érico Rolim <erico.erc@gmail.com>
+Date:   Sun Aug 16 15:19:37 2020 -0300
+
+    svlogd.c: add missing header.
+
+diff --git a/src/svlogd.c b/src/svlogd.c
+index 8de65e0..8c68c73 100644
+--- a/runit-2.1.2/src/svlogd.c
++++ b/runit-2.1.2/src/svlogd.c
+@@ -8,6 +8,7 @@
+ #include <dirent.h>
+ #include <unistd.h>
+ #include <stdio.h>
++#include <string.h>
+ #include "pmatch.h"
+ #include "fmt_ptime.h"
+ #include "alloc.h"

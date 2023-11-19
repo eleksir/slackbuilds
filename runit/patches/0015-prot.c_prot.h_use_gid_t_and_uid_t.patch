@@ -1,0 +1,48 @@
+commit fc2f8674d726df289e650b79189c4221ff66c8a5
+Author: Érico Rolim <erico.erc@gmail.com>
+Date:   Sun Aug 16 15:20:03 2020 -0300
+
+    prot.c, prot.h: use gid_t and uid_t.
+
+diff --git a/src/prot.c b/src/prot.c
+index 79a88c5..66cdc05 100644
+--- a/runit-2.1.2/src/prot.c
++++ b/runit-2.1.2/src/prot.c
+@@ -3,7 +3,11 @@
+ #include "hasshsgr.h"
+ #include "prot.h"
+ 
+-int prot_gid(int gid)
++#include <sys/types.h>
++#include <unistd.h>
++#include <grp.h>
++
++int prot_gid(gid_t gid)
+ {
+ #ifdef HASSHORTSETGROUPS
+   short x[2];
+@@ -15,7 +19,7 @@ int prot_gid(int gid)
+   return setgid(gid); /* _should_ be redundant, but on some systems it isn't */
+ }
+ 
+-int prot_uid(int uid)
++int prot_uid(uid_t uid)
+ {
+   return setuid(uid);
+ }
+diff --git a/src/prot.h b/src/prot.h
+index 2e5cb81..b9fa6c8 100644
+--- a/runit-2.1.2/src/prot.h
++++ b/runit-2.1.2/src/prot.h
+@@ -3,7 +3,9 @@
+ #ifndef PROT_H
+ #define PROT_H
+ 
+-extern int prot_gid(int);
+-extern int prot_uid(int);
++#include <sys/types.h>
++
++extern int prot_gid(gid_t);
++extern int prot_uid(uid_t);
+ 
+ #endif

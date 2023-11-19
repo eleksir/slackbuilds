@@ -1,0 +1,17 @@
+commit 3295cb4865759a71c27ca5fe4ade980c8b69db6c
+Author: Érico Rolim <erico.erc@gmail.com>
+Date:   Sun Aug 16 15:19:51 2020 -0300
+
+    pathexec_run.c:: add missing header.
+
+diff --git a/src/pathexec_run.c b/src/pathexec_run.c
+index 1770ac7..70ac7a8 100644
+--- a/runit-2.1.2/src/pathexec_run.c
++++ b/runit-2.1.2/src/pathexec_run.c
+@@ -1,5 +1,6 @@
+ /* Public domain. */
+ 
++#include <unistd.h>
+ #include "error.h"
+ #include "stralloc.h"
+ #include "str.h"

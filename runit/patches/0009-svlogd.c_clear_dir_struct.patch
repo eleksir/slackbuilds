@@ -1,0 +1,18 @@
+commit e0f48258bb2ff9f65524530771d4f6f4b2948384
+Author: Érico Rolim <erico.erc@gmail.com>
+Date:   Sun Aug 16 15:12:35 2020 -0300
+
+    svlogd.c: Clear dir struct.
+
+diff --git a/src/svlogd.c b/src/svlogd.c
+index 5e55a90..006493e 100644
+--- a/runit-2.1.2/src/svlogd.c
++++ b/runit-2.1.2/src/svlogd.c
+@@ -705,6 +705,7 @@ int main(int argc, const char **argv) {
+   coe(fdwdir);
+   dir =(struct logdir*)alloc(dirn *sizeof(struct logdir));
+   if (! dir) die_nomem();
++  memset(dir, 0, dirn * sizeof(struct logdir));
+   for (i =0; i < dirn; ++i) {
+     dir[i].fddir =-1; dir[i].fdcur =-1;
+     dir[i].btmp =(char*)alloc(buflen *sizeof(char));

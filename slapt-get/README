@@ -1,0 +1,6 @@
+slapt-get is unofficial package manager maintained by Jason Woodward.
+
+
+slapt-get tries to behave similar to Debian's apt-get, so it supports
+different metadata including slack-required, slack-conflicts, slack-suggests
+if package supplies it.

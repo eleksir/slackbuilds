@@ -1,0 +1,7 @@
+dmenu
+libev
+perl-AnyEvent
+perl-JSON-XS
+xcb-util-xrm
+yajl
+i3lock

@@ -1,0 +1,134 @@
+#!/bin/sh
+
+# Slackware build script for ZNC
+
+# Copyright 2007-2013   Sean Donner (sean.donner@gmail.com)
+# Copyright 2017, 2018  Mario Preksavec, Zagreb, Croatia
+# Copyright 2023        Sergei Fedosoff <eleksir@gmail.com>
+#
+# All rights reserved.
+#
+# Redistribution and use of this script, with or without modification, is
+# permitted provided that the following conditions are met:
+#
+# 1. Redistributions of this script must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+#
+# THIS SOFTWARE IS PROVIDED BY THE AUTHOR "AS IS" AND ANY EXPRESS OR IMPLIED
+# WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+# MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO
+# EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+# SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+# PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
+# OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+# WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+# OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+# ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+PRGNAM=znc
+VERSION=${VERSION:-1.8.2}
+BUILD=${BUILD:-2}
+TAG=${TAG:-_EXs}
+
+ZNC_USER=${ZNC_USER:-znc}
+
+if [ -z "$ARCH" ]; then
+  case "$( uname -m )" in
+    i?86) ARCH=i486 ;;
+    arm*) ARCH=arm ;;
+       *) ARCH=$( uname -m ) ;;
+  esac
+fi
+
+CWD=$(pwd)
+TMP=${TMP:-/tmp/EXs}
+PKG=$TMP/package-$PRGNAM
+OUTPUT=${OUTPUT:-/tmp}
+
+if [ "$ARCH" = "i486" ]; then
+   SLKCFLAGS="-O2 -march=i486 -mtune=i686"
+   LIBDIRSUFFIX=""
+elif [ "$ARCH" = "i686" ]; then
+   SLKCFLAGS="-O2 -march=i686 -mtune=i686"
+   LIBDIRSUFFIX=""
+elif [ "$ARCH" = "x86_64" ]; then
+   SLKCFLAGS="-O2 -fPIC"
+   LIBDIRSUFFIX="64"
+fi
+
+# Bail if user and/or group isn't valid on your system
+# uid=219 is suggested to avoid conflicts with other SBo packages,
+# but it's your call: http://slackbuilds.org/uid_gid.txt
+if ! grep -q "^$ZNC_USER:" /etc/passwd; then
+  echo "  You must have a $ZNC_USER user to run this script. "
+  echo "  Something like this should suffice for most systems: "
+  echo "      # useradd -u 219 -g 99 -c \"ZNC User\" -d /etc/znc $ZNC_USER"
+  exit 1
+fi
+
+set -e
+
+rm -rf $PKG
+mkdir -p $TMP $PKG $OUTPUT
+cd $TMP
+rm -rf $PRGNAM-$VERSION
+tar xf $CWD/$PRGNAM-$VERSION.tar.gz
+cd $PRGNAM-$VERSION
+chown -R root:root .
+find -L . \
+ \( -perm 777 -o -perm 775 -o -perm 750 -o -perm 711 -o -perm 555 \
+  -o -perm 511 \) -exec chmod 755 {} \+ -o \
+ \( -perm 666 -o -perm 664 -o -perm 640 -o -perm 600 -o -perm 444 \
+  -o -perm 440 -o -perm 400 \) -exec chmod 644 {} \+
+
+mkdir build
+cd build
+cmake -GNinja \
+    -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+    -DCMAKE_C_FLAGS:STRING="-g $SLKCFLAGS -rdynamic" \
+    -DCMAKE_CXX_FLAGS:STRING="-g $SLKCFLAGS -rdynamic" \
+    -DCMAKE_EXE_LINKER_FLAGS:STRING="-flto -rdynamic -Wl,--export-dynamic -Wl,-E -Wl,--no-as-needed -Wl,-O2" \
+    -DCMAKE_INSTALL_PREFIX=/usr \
+    -DMANDIR=/usr/man \
+    -DLIBDIR=/usr/lib${LIBDIRSUFFIX} \
+    -DWANT_CYRUS=ON \
+    -DWANT_I18N=ON \
+    -DWANT_ICU=ON \
+    -DWANT_IPV6=ON \
+    -DWANT_OPENSSL=ON \
+    -DWANT_PERL=ON \
+    -DWANT_PYTHON=ON \
+    -DWANT_SWIG=ON \
+    -DWANT_TCL=ON \
+    -DWANT_ZLIB=ON \
+    ..
+
+ninja -j$(nproc)
+DESTDIR=$PKG ninja install
+cd ..
+
+find $PKG | xargs file | grep -e "executable" -e "shared object" | grep ELF \
+  | cut -f 1 -d : | xargs strip --strip-unneeded 2> /dev/null || true
+
+# Change the ownership of the configuration directory
+install -dpm 0750 -o $ZNC_USER $PKG/etc/znc
+
+# Install an init script
+mkdir -p $PKG/etc/rc.d
+sed -e "s/@ZNC_USER@/$ZNC_USER/g" -e "s/@VERSION@/$VERSION/g" $CWD/rc.znc \
+  > $PKG/etc/rc.d/rc.znc.new
+
+mkdir -p $PKG/usr/doc/$PRGNAM-$VERSION
+cp -a \
+  LICENSE* README* \
+  $PKG/usr/doc/$PRGNAM-$VERSION
+cat $CWD/$PRGNAM.SlackBuild > $PKG/usr/doc/$PRGNAM-$VERSION/$PRGNAM.SlackBuild
+sed "s/@ZNC_USER@/$ZNC_USER/g" $CWD/README.SLACKWARE > \
+  $PKG/usr/doc/$PRGNAM-$VERSION/README.SLACKWARE
+
+mkdir -p $PKG/install
+cat $CWD/slack-desc > $PKG/install/slack-desc
+cat $CWD/doinst.sh > $PKG/install/doinst.sh
+
+cd $PKG
+/sbin/makepkg -l y -c n $OUTPUT/$PRGNAM-$VERSION-$ARCH-$BUILD$TAG.${PKGTYPE:-tgz}

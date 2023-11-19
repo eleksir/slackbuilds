@@ -1,0 +1,13 @@
+diff -ruNp admin/runit-2.1.2/src/alloc.c admin.new/runit-2.1.2/src/alloc.c
+--- admin/runit-2.1.2/src/alloc.c	2014-08-10 22:22:34.000000000 +0400
++++ admin.new/runit-2.1.2/src/alloc.c	2020-11-04 19:12:09.110651948 +0300
+@@ -18,7 +18,7 @@ unsigned int n;
+   char *x;
+   n = ALIGNMENT + n - (n & (ALIGNMENT - 1)); /* XXX: could overflow */
+   if (n <= avail) { avail -= n; return space + avail; }
+-  x = malloc(n);
++  x = calloc(n, sizeof(char));
+   if (!x) errno = error_nomem;
+   return x;
+ }
+

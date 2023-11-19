@@ -1,0 +1,15 @@
+diff -ruNp i3-4.19/testcases/inject_randr1.5.c i3-4.19.new/testcases/inject_randr1.5.c
+--- i3-4.19/testcases/inject_randr1.5.c	2020-11-15 20:23:01.532988500 +0300
++++ i3-4.19.new/testcases/inject_randr1.5.c	2020-11-20 12:23:02.176011604 +0300
+@@ -267,9 +267,9 @@ static void read_client_x11_packet_cb(EV
+         }
+     } else if (opcode == connstate->randr_major_opcode) {
+         const uint8_t randr_opcode = ((generic_x11_request_t *)request)->pad0;
+-        if (randr_opcode == XCB_RANDR_GET_MONITORS) {
++        if (randr_opcode == 42) {
+             connstate->getmonitors = connstate->sequence;
+-        } else if (randr_opcode == XCB_RANDR_GET_OUTPUT_INFO) {
++        } else if (randr_opcode == 9) {
+             connstate->getoutputinfo = connstate->sequence;
+         }
+     }

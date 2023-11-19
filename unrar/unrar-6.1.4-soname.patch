@@ -1,0 +1,12 @@
+diff -ruNp unrar/makefile unrar.new/makefile
+--- unrar/makefile	2020-05-21 12:13:21.000000000 +0300
++++ unrar.new/makefile	2022-02-06 00:13:16.126128359 +0300
+@@ -157,7 +157,7 @@ lib:	WHAT=RARDLL
+ lib:	CXXFLAGS+=$(LIBFLAGS)
+ lib:	clean $(OBJECTS) $(LIB_OBJ)
+ 	@rm -f libunrar.*
+-	$(LINK) -shared -o libunrar.so $(LDFLAGS) $(OBJECTS) $(LIB_OBJ)
++	$(LINK) -shared -Wl,-soname,libunrar.so.$(libversion) -o libunrar.so.$(libversion) $(LDFLAGS) $(OBJECTS) $(LIB_OBJ)
+ 	$(AR) rcs libunrar.a $(OBJECTS) $(LIB_OBJ)
+ 
+ install-unrar:

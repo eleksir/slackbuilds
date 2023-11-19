@@ -1,0 +1,17 @@
+# run as user
+GITEAUSER=git
+
+# path to config
+CONFIG=/etc/gitea/gitea.ini
+
+# Custom dir path
+CUSTOMDIR=/var/lib/gitea/custom
+
+# Working dir, where data is stored
+WORKDIR=/var/lib/gitea
+
+# Pid file of gitea
+PIDFILE=/var/run/gitea/gitea.pid
+
+# Log to
+LOG=/var/log/gitea/gitea.log

@@ -1,0 +1,24 @@
+commit 727b2a5236346e75ec6455179d5073e348d165be (HEAD -> refs/heads/master, refs/remotes/origin/master, refs/remotes/origin/HEAD)
+Author: Érico Rolim <erico.erc@gmail.com>
+Date:   Wed Aug 26 21:00:34 2020 -0300
+
+    chpst: fix undefined operation on sequence point.
+    
+    Based on patch from
+    
+    https://salsa.debian.org/debian/runit/-/blob/77a49befd7c1a08bfe0613454e540562529811fa/debian/patches/0016-fix-warning-for-undefined-operation-on-sequence-poin.patch
+
+diff --git a/src/chpst.c b/src/chpst.c
+index f279d44..1cca5f4 100644
+--- a/runit-2.1.2/src/chpst.c
++++ b/runit-2.1.2/src/chpst.c
+@@ -308,7 +308,8 @@ int main(int argc, const char **argv) {
+     case 'n':
+       switch (*optarg) {
+         case '-':
+-          if (optarg[scan_ulong(++optarg, &ul)]) usage(); nicelvl =ul;
++          ++optarg;
++          if (optarg[scan_ulong(optarg, &ul)]) usage(); nicelvl =ul;
+           nicelvl *=-1;
+           break;
+         case '+': ++optarg;

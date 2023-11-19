@@ -1,0 +1,4 @@
+#!/bin/bash -e
+
+wget -q 'https://www.internic.net/domain/named.root' -O /etc/unbound/named.root.tmp
+mv --force --update /etc/unbound/named.root.tmp /etc/unbound/named.root

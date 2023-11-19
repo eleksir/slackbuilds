@@ -1,0 +1,135 @@
+#!/bin/sh
+# Slackware package build script for runit
+
+# Copyright 2023 Sergei Fedosoff <eleksir@gmail.com>
+#
+# All rights reserved.
+#
+# Redistribution and use of this script, with or without modification, is
+# permitted provided that the following conditions are met:
+#
+# 1. Redistributions of this script must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+#
+# THIS SOFTWARE IS PROVIDED BY THE AUTHOR ''AS IS'' AND ANY EXPRESS OR IMPLIED
+# WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+# MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO
+# EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+# SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+# PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
+# OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+# WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+# OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+# ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+PRGNAM=runit
+VERSION=${VERSION:-2.1.2}
+BUILD=${BUILD:-4}
+TAG=${TAG:-_EXs}
+
+if [ -z "$ARCH" ]; then
+  case "$( uname -m )" in
+    i?86) ARCH=i586 ;;
+    arm*) ARCH=arm ;;
+       *) ARCH=$( uname -m ) ;;
+  esac
+fi
+
+set -e
+
+CWD=$(pwd)
+TMP=${TMP:-/tmp/EXs}
+PKG=$TMP/package-$PRGNAM
+OUTPUT=${OUTPUT:-/tmp}
+
+if [ "$ARCH" = "i586" ]; then
+  SLKCFLAGS="-O2 -g -march=i586 -mtune=i686"
+elif [ "$ARCH" = "i686" ]; then
+  SLKCFLAGS="-O2 -g -march=i686 -mtune=i686"
+elif [ "$ARCH" = "x86_64" ]; then
+  SLKCFLAGS="-O2 -g -fPIC"
+else
+  SLKCFLAGS="-O2 -g"
+fi
+
+rm -rf $PKG
+mkdir -p $TMP $PKG $OUTPUT
+cd $TMP
+rm -rf $PRGNAM-$VERSION
+tar xf $CWD/$PRGNAM-$VERSION.tar.gz --strip-components=1
+cd $PRGNAM-$VERSION
+
+patch -p2 -i $CWD/patches/0003-utmpset.c-mixes-int32_t-and-time_t.diff
+patch -p2 -i $CWD/patches/0006-make-buildsystem-respect-CFLAGS.patch
+patch -p2 -i $CWD/patches/0007-move-communication-files.patch
+patch -p2 -i $CWD/patches/0008-emulate-sysv-runlevel-5.patch
+patch -p2 -i $CWD/patches/0009-svlogd.c_clear_dir_struct.patch
+patch -p2 -i $CWD/patches/0010-svlogd.c_Initialize_all_fields_of_sockaddr_in.patch
+patch -p2 -i $CWD/patches/0011-svlogd.c_add_missing_header.patch
+patch -p2 -i $CWD/patches/0012-seek_set.c_add_missing_header.patch
+patch -p2 -i $CWD/patches/0013-pathexec_run.c_add_missing_header.patch
+patch -p2 -i $CWD/patches/0014-chkshsgr.c_use_gid_t.patch
+patch -p2 -i $CWD/patches/0015-prot.c_prot.h_use_gid_t_and_uid_t.patch
+patch -p2 -i $CWD/patches/0016-chpst_fix_undefined_operation_on_sequence_point.patch
+patch -p2 -i $CWD/patches/enable-runsvup-and-runsvdown.patch
+
+patch -p2 -i $CWD/patches/0017-fix_runsvdir_c_event_check.patch
+patch -p2 -i $CWD/patches/0018-resource_leaks_and_other_issues_as_reported_by_infer.patch
+patch -p2 -i $CWD/patches/0019-replace_obsolete_usleep_with_nanosleep.patch
+patch -p2 -i $CWD/patches/0020-implicit_declarations_incompatible_types_argv_type.patch
+patch -p2 -i $CWD/patches/0022-fix_spin_lock_on_systems_with_poor_clock.patch
+
+patch -p2 -i $CWD/patches/malloc-to-calloc.patch
+
+chown -R root:root .
+find -L . \
+ \( -perm 777 -o -perm 775 -o -perm 750 -o -perm 711 -o -perm 555 \
+  -o -perm 511 \) -exec chmod 755 {} \+ -o \
+ \( -perm 666 -o -perm 664 -o -perm 640 -o -perm 600 -o -perm 444 \
+  -o -perm 440 -o -perm 400 \) -exec chmod 644 {} \+
+
+echo gcc $SLKCFLAGS -Wall > src/conf-cc
+
+package/compile
+package/check
+
+install -d $PKG/{sbin,usr/bin}
+install -Dpm 0755 command/{runit*,utmpset} $PKG/sbin
+install -Dpm 0755 command/{chpst,runsv*,sv*} $PKG/usr/bin
+install -Dpm 0750 etc/2 $PKG/sbin/runsvdir-start
+
+install -d $PKG/usr/man/man8
+install -Dpm 0644 man/* $PKG/usr/man/man8
+install -Dpm 0644 $CWD/svwaitdown.8 $PKG/usr/man/man8
+install -Dpm 0644 $CWD/svwaitup.8 $PKG/usr/man/man8
+
+find $PKG -print0 | xargs -0 file | grep -e "executable" -e "shared object" | grep ELF \
+  | cut -f 1 -d : | xargs strip --strip-unneeded 2> /dev/null || true
+
+find $PKG/usr/man -type f -exec gzip -9 {} \+
+for i in $( find $PKG/usr/man -type l ) ; do ln -s $( readlink $i ).gz $i.gz ; rm $i ; done
+
+# Proceed with the configuration files. By default we install them.
+if [ "${CONFIG:-no}" != "yes" ]; then
+  # Set up the configuration files
+  cp -rp $CWD/config/* $PKG/
+  # Set up the runlevels
+  mkdir -p $PKG/etc/runit/runsvdir/{default,single}/
+  ln -s /etc/sv/agetty-tty1 $PKG/etc/runit/runsvdir/single/
+  ln -s default $PKG/etc/runit/runsvdir/current
+  for N in 1 2 3 4 5 6; do
+    ln -s /etc/sv/agetty-tty${N} $PKG/etc/runit/runsvdir/default/
+  done
+  ln -s /etc/runit/runsvdir/current $PKG/service
+fi
+
+mkdir -p $PKG/usr/doc/$PRGNAM-$VERSION
+cp -a package/CHANGES package/README package/TODO package/COPYING package/THANKS \
+  doc/ etc/ $PKG/usr/doc/$PRGNAM-$VERSION
+cat $CWD/$PRGNAM.SlackBuild > $PKG/usr/doc/$PRGNAM-$VERSION/$PRGNAM.SlackBuild
+
+mkdir -p $PKG/install
+cat $CWD/slack-desc > $PKG/install/slack-desc
+
+cd $PKG
+/sbin/makepkg -l y -c n $OUTPUT/$PRGNAM-$VERSION-$ARCH-$BUILD$TAG.${PKGTYPE:-tgz}

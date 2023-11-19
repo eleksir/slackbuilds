@@ -1,0 +1,13 @@
+/var/log/nginx/*.log {
+  su apache apache
+  daily
+  nodateext
+  rotate 4
+  notifempty
+  compress
+  delaycompress
+  sharedscripts
+  postrotate
+    /etc/rc.d/rc.nginx rotate
+  endscript
+}

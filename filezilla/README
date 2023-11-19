@@ -1,0 +1,13 @@
+FileZilla Client is a fast and reliable cross-platform FTP, FTPS and
+SFTP client with lots of useful features and an intuitive graphical user
+interface.
+
+pugixml is an optional dependency - to use an installed version of pugixml,
+run the script as "PUGIXML=yes ./filezilla.SlackBuild" - otherwise, the
+build will use an included copy of pugixml.
+
+
+N.B.
+Filzilla requires c++17, so it can be built with gcc-8 and more recent
+In this slackbuild gcc-10.2.0 is used, there are some gcc version dependent
+flags set in slackbuild.

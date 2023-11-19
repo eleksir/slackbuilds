@@ -1,0 +1,56 @@
+diff -ruNp lua-5.1.5/Makefile lua-5.1.5.new/Makefile
+--- lua-5.1.5/Makefile	2012-02-10 13:50:23.000000000 +0400
++++ lua-5.1.5.new/Makefile	2023-11-07 02:08:47.410419337 +0300
+@@ -9,7 +9,7 @@ PLAT= none
+ 
+ # Where to install. The installation starts in the src and doc directories,
+ # so take care if INSTALL_TOP is not an absolute path.
+-INSTALL_TOP= /usr/local
++INSTALL_TOP= /usr
+ INSTALL_BIN= $(INSTALL_TOP)/bin
+ INSTALL_INC= $(INSTALL_TOP)/include
+ INSTALL_LIB= $(INSTALL_TOP)/lib
+diff -ruNp lua-5.1.5/etc/lua.pc lua-5.1.5.new/etc/lua.pc
+--- lua-5.1.5/etc/lua.pc	2012-02-10 13:50:30.000000000 +0400
++++ lua-5.1.5.new/etc/lua.pc	2023-11-07 02:10:11.503423636 +0300
+@@ -8,7 +8,7 @@ V= 5.1
+ R= 5.1.5
+ 
+ # grep '^INSTALL_.*=' ../Makefile | sed 's/INSTALL_TOP/prefix/'
+-prefix= /usr/local
++prefix= /usr
+ INSTALL_BIN= ${prefix}/bin
+ INSTALL_INC= ${prefix}/include
+ INSTALL_LIB= ${prefix}/lib
+diff -ruNp lua-5.1.5/src/Makefile lua-5.1.5.new/src/Makefile
+--- lua-5.1.5/src/Makefile	2012-02-14 00:41:22.000000000 +0400
++++ lua-5.1.5.new/src/Makefile	2023-11-07 02:07:21.778414960 +0300
+@@ -8,14 +8,14 @@
+ PLAT= none
+ 
+ CC= gcc
+-CFLAGS= -O2 -Wall $(MYCFLAGS)
++CFLAGS= $(SLKCFLAGS) $(MYCFLAGS)
+ AR= ar rcu
+ RANLIB= ranlib
+ RM= rm -f
+ LIBS= -lm $(MYLIBS)
+ 
+ MYCFLAGS=
+-MYLDFLAGS=
++MYLDFLAGS=$(SLKLDFLAGS)
+ MYLIBS=
+ 
+ # == END OF USER SETTINGS. NO NEED TO CHANGE ANYTHING BELOW THIS LINE =========
+diff -ruNp lua-5.1.5/src/luaconf.h lua-5.1.5.new/src/luaconf.h
+--- lua-5.1.5/src/luaconf.h	2008-02-11 19:25:08.000000000 +0300
++++ lua-5.1.5.new/src/luaconf.h	2023-11-07 02:09:40.687422060 +0300
+@@ -94,7 +94,7 @@
+ 	".\\?.dll;"  LUA_CDIR"?.dll;" LUA_CDIR"loadall.dll"
+ 
+ #else
+-#define LUA_ROOT	"/usr/local/"
++#define LUA_ROOT	"/usr/"
+ #define LUA_LDIR	LUA_ROOT "share/lua/5.1/"
+ #define LUA_CDIR	LUA_ROOT "lib/lua/5.1/"
+ #define LUA_PATH_DEFAULT  \

@@ -1,0 +1,86 @@
+#!/bin/bash
+
+set -e
+
+DAEMON=/usr/sbin/chronyd
+RUNDIR=/run/chrony
+VARDIR=/var/lib/chrony
+LOGDIR=/var/log/chrony
+PIDFILE=${RUNDIR}/chrony.pid
+USER=ntp
+GROUP=ntp
+
+# Start/stop/restart chrony daemon.
+__start() {
+  if [ -e $RUNDIR ]; then
+    chown -R ${USER}:${GROUP} $RUNDIR
+  else
+    install -dm 0750 -o $USER -g $GROUP $RUNDIR
+  fi
+
+  if [ -e $VARDIR ]; then
+    chown -R ${USER}:${GROUP} $VARDIR
+  else
+    install -dm 0755 -o $USER -g $GROUP $VARDIR
+  fi
+
+  if [ -e $LOGDIR ]; then
+    chown -R ${USER}:${GROUP} $LOGDIR
+  else
+    install -dm 0755 -o $USER -g $GROUP $LOGDIR
+  fi
+
+  if [ -e ${VARDIR}/drift ]; then
+    :
+  else
+    touch ${VARDIR}/drift
+  fi
+
+  chown ${USER}:${GROUP} ${VARDIR}/drift
+
+  if [ -x $DAEMON ]; then
+    echo "Starting NTP daemon:  $DAEMON -m"
+    $DAEMON -m
+  fi
+}
+
+__stop() {
+  echo "Stopping NTP daemon:  $DAEMON -m"
+  if [ -r $PIDFILE ]; then
+    kill $(cat $PIDFILE)
+  else
+    echo "Chronyd is not running"
+  fi
+}
+
+__restart() {
+  __stop
+
+  for i in 1 2 3; do
+    if [ -r $PIDFILE ]; then
+      # ash/dash/nash builtin echo just ignoring -n option
+      /usr/bin/echo -n "."
+      sleep 1
+    else
+      break
+    fi
+  done
+
+  echo
+
+  __start
+}
+
+case "$1" in
+'start')
+  __start
+  ;;
+'stop')
+  __stop
+  ;;
+'restart')
+  __restart
+  ;;
+*)
+  echo "usage $0 start|stop|restart"
+esac

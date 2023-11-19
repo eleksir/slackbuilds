@@ -1,0 +1,27 @@
+diff -ruN admin/runit-2.1.2/package/commands admin.new/runit-2.1.2/package/commands
+--- admin/runit-2.1.2/package/commands	2014-08-10 22:22:35.000000000 +0400
++++ admin.new/runit-2.1.2/package/commands	2020-04-29 00:52:22.669255084 +0300
+@@ -5,5 +5,7 @@
+ runsvchdir
+ runsvdir
+ sv
++svwaitdown
++svwaitup
+ svlogd
+ utmpset
+diff -ruN admin/runit-2.1.2/src/Makefile admin.new/runit-2.1.2/src/Makefile
+--- admin/runit-2.1.2/src/Makefile	2014-08-10 22:22:35.000000000 +0400
++++ admin.new/runit-2.1.2/src/Makefile	2020-04-29 00:50:35.024580450 +0300
+@@ -1,9 +1,10 @@
+-IT=chpst runit runit-init runsv runsvchdir runsvdir sv svlogd utmpset
++IT=chpst runit runit-init runsv runsvchdir runsvdir sv svlogd svwaitdown svwaitup utmpset
++ME=chpst runit runit-init runsv runsvchdir runsvdir sv svlogd utmpset
+ 
+ default: sysdeps $(IT)
+ 
+ check: $(IT)
+-	./check-local $(IT)
++	./check-local $(ME)
+ 
+ runit: load runit.o unix.a byte.a
+ 	./load runit unix.a byte.a -static
