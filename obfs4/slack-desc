@@ -1,0 +1,19 @@
+# HOW TO EDIT THIS FILE:
+# The "handy ruler" below makes it easier to edit a package description.
+# Line up the first '|' above the ':' following the base package name, and
+# the '|' on the right side marks the last column you can put a character in.
+# You must make exactly 11 lines for the formatting to be correct.  It's also
+# customary to leave one space after the ':' except on otherwise blank lines.
+
+     |-----handy-ruler------------------------------------------------------|
+obfs4: obfs4 (The obfourscator)
+obfs4:
+obfs4: This is a look-like nothing obfuscation protocol that incorporates
+obfs4: ideas and concepts from Philipp Winter's ScrambleSuit protocol. The
+obfs4: obfs naming was chosen primarily because it was shorter, in terms of
+obfs4: protocol ancestery obfs4 is much closer to ScrambleSuit than
+obfs4: obfs2/obfs3.
+obfs4:
+obfs4: Homepage: https://github.com/Yawning/obfs4
+obfs4:
+obfs4:
