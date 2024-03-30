@@ -29,7 +29,7 @@
 
 PRGNAM=i3
 VERSION=${VERSION:-4.23}
-BUILD=${BUILD:-1}
+BUILD=${BUILD:-2}
 TAG=${TAG:-_EXs}
 
 if [ -z "$ARCH" ]; then
@@ -70,16 +70,18 @@ cd $PRGNAM-$VERSION
 chown -R root:root .
 find -L . \
  \( -perm 777 -o -perm 775 -o -perm 750 -o -perm 711 -o -perm 555 \
-  -o -perm 511 \) -exec chmod 755 {} \; -o \
+  -o -perm 511 \) -exec chmod 755 {} \+ -o \
  \( -perm 666 -o -perm 664 -o -perm 640 -o -perm 600 -o -perm 444 \
-  -o -perm 440 -o -perm 400 \) -exec chmod 644 {} \;
+  -o -perm 440 -o -perm 400 \) -exec chmod 644 {} \+
+
+patch -p1 -i $CWD/f8befe378ab3c9f8d035657ca0247c9b8c242b6b.patch
+patch -p1 -i $CWD/b660d6a902cf44be22c434101dd2a4e6743e26bc.patch
 
 # Configure, build, and install:
 export CFLAGS="-g3 $SLKCFLAGS -flto -rdynamic"
 export CXXFLAGS="-g3 $SLKCFLAGS -flto -rdynamic"
 export LDFLAGS="-flto -rdynamic -Wl,--export-dynamic -Wl,-E -Wl,--no-as-needed -Wl,-O2"
 mkdir meson-build
-cd meson-build
 meson setup \
   --prefix=/usr \
   --libdir=lib${LIBDIRSUFFIX} \
@@ -93,10 +95,10 @@ meson setup \
   --localstatedir=/var \
   --buildtype=release \
   -Dmans=true \
-  .. || exit 1
-  "${NINJA:=ninja}" $NUMJOBS || exit 1
-  DESTDIR=$PKG $NINJA install || exit 1
-cd ..
+  meson-build
+
+meson compile -C meson-build
+DESTDIR=$PKG meson install -C meson-build
 
 find $PKG -print0 | xargs -0 file | grep -e "executable" -e "shared object" | grep ELF \
   | cut -f 1 -d : | xargs strip --strip-unneeded 2> /dev/null || true
@@ -147,12 +149,12 @@ for i in $( find $PKG/usr/man -type l ) ; do ln -s $( readlink $i ).gz $i.gz ; r
 
 find $PKG -depth -type d -empty -delete || true
 
-cat $CWD/$PRGNAM.SlackBuild > $PKG/usr/doc/$PRGNAM-$VERSION/$PRGNAM.SlackBuild
+install -Dpm 0644 $CWD/$PRGNAM.SlackBuild $PKG/usr/doc/$PRGNAM-$VERSION/$PRGNAM.SlackBuild
 
 mkdir -p $PKG/install
-cat $CWD/slack-desc > $PKG/install/slack-desc
-cat $CWD/doinst.sh > $PKG/install/doinst.sh
-cat $CWD/slack-required > $PKG/install/slack-required
+install -Dpm 0644 $CWD/slack-desc     $PKG/install/slack-desc
+install -Dpm 0644 $CWD/doinst.sh      $PKG/install/doinst.sh
+install -Dpm 0644 $CWD/slack-required $PKG/install/slack-required
 
 cd $PKG
 /sbin/makepkg -l y -c n $OUTPUT/$PRGNAM-$VERSION-$ARCH-$BUILD$TAG.${PKGTYPE:-tgz}

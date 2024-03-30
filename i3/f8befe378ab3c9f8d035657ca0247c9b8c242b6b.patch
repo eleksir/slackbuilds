@@ -1,0 +1,146 @@
+From f8befe378ab3c9f8d035657ca0247c9b8c242b6b Mon Sep 17 00:00:00 2001
+From: Orestis Floros <orestisflo@gmail.com>
+Date: Wed, 31 Jan 2024 08:14:32 +0100
+Subject: [PATCH] Avoid creating redundant containers when switching between
+ tabbed/stacked and split layouts (#5469)
+
+Fixes #3001
+---
+ release-notes/changes/3-redundant-containers |  1 +
+ src/con.c                                    | 25 ++++++
+ testcases/t/550-split-redundant-containers.t | 82 ++++++++++++++++++++
+ 3 files changed, 108 insertions(+)
+ create mode 100644 release-notes/changes/3-redundant-containers
+ create mode 100644 testcases/t/550-split-redundant-containers.t
+
+diff --git a/release-notes/changes/3-redundant-containers b/release-notes/changes/3-redundant-containers
+new file mode 100644
+index 000000000..cd6ab9f3d
+--- /dev/null
++++ b/release-notes/changes/3-redundant-containers
+@@ -0,0 +1 @@
++avoid creating redundant containers when switching between tabbed/stacked and split layouts
+diff --git a/src/con.c b/src/con.c
+index aebc46cf8..917e797a6 100644
+--- a/src/con.c
++++ b/src/con.c
+@@ -2063,6 +2063,31 @@ void con_set_layout(Con *con, layout_t layout) {
+         }
+     }
+ 
++    if (con->type != CT_WORKSPACE && con->parent->type != CT_WORKSPACE &&
++        con_num_children(con) == 1 && con_num_children(con->parent) == 1) {
++        /* Special case: Avoid creating redundant containers (#3001):
++         * split h / v (tree_split()) will avoid creating new containers when
++         * the target container is already a single child in L_SPLITH /
++         * L_SPLITV. However, if the layout is tabbed / stacked, a new split is
++         * created. This means, however, that when the user continuously
++         * switches between split h/v and tabbed / stacked, an endless series
++         * of 1-child containers will be created. Since a single level of split
++         * containers on top of tabbed / stacked containers are useful, we want
++         * to avoid this situation here.
++         * Example of past behaviour: S[V[w]] -> S[S[w]] -> S[S[V[w]]] -> …
++         * Example of desired behaviour: S[V[w]] -> S[w] -> S[v[w]] -> …
++         * Therefore, when both the current & parent containers have a single
++         * child, we just close the redundant middle container and proceed with
++         * the parent. */
++        Con *parent = con->parent;
++        Con *child = TAILQ_FIRST(&(con->nodes_head));
++        con_detach(child);
++        con_attach(child, parent, true);
++        parent->last_split_layout = con->last_split_layout;
++        tree_close_internal(con, DONT_KILL_WINDOW, true);
++        con = parent;
++    }
++
+     if (layout == L_DEFAULT) {
+         /* Special case: the layout formerly known as "default" (in combination
+          * with an orientation). Since we switched to splith/splitv layouts,
+diff --git a/testcases/t/550-split-redundant-containers.t b/testcases/t/550-split-redundant-containers.t
+new file mode 100644
+index 000000000..3dfef3995
+--- /dev/null
++++ b/testcases/t/550-split-redundant-containers.t
+@@ -0,0 +1,82 @@
++#!perl
++# vim:ts=4:sw=4:expandtab
++#
++# Please read the following documents before working on tests:
++# • https://build.i3wm.org/docs/testsuite.html
++#   (or docs/testsuite)
++#
++# • https://build.i3wm.org/docs/lib-i3test.html
++#   (alternatively: perldoc ./testcases/lib/i3test.pm)
++#
++# • https://build.i3wm.org/docs/ipc.html
++#   (or docs/ipc)
++#
++# • http://onyxneon.com/books/modern_perl/modern_perl_a4.pdf
++#   (unless you are already familiar with Perl)
++#
++# Test that splitting and stacked/tabbed layouts do not create redundant
++# containers.
++# Ticket: #3001
++# Bug still in: 4.22-24-ga5da4d54
++use i3test;
++
++cmp_tree(
++    msg => 'toggling between split h/v',
++    layout_before => 'H[a*]',
++    layout_after => 'V[a*]',
++    cb => sub {
++        cmd 'split v, split h, split v';
++    });
++cmp_tree(
++    msg => 'toggling between tabbed/stacked',
++    layout_before => 'H[a*]',
++    layout_after => 'S[a*]',
++    cb => sub {
++        cmd 'layout tabbed, layout stacked';
++    });
++cmp_tree(
++    msg => 'split h to v and then tabbed',
++    layout_before => 'H[a*]',
++    layout_after => 'T[a*]',
++    cb => sub {
++        cmd 'split v, layout tabbed';
++    });
++cmp_tree(
++    msg => 'repeat tabbed layout',
++    layout_before => 'H[a*]',
++    layout_after => 'T[a*]',
++    cb => sub {
++        cmd 'layout tabbed' for 1..5;
++    });
++cmp_tree(
++    msg => 'split v inside tabbed',
++    layout_before => 'H[a*]',
++    layout_after => 'T[V[a*]]',
++    cb => sub {
++        cmd 'layout tabbed, split v';
++    });
++cmp_tree(
++    msg => 'split v inside tabbed and back to just tabbed',
++    layout_before => 'H[a*]',
++    layout_after => 'T[a*]',
++    cb => sub {
++        cmd 'layout tabbed, split v, layout tabbed';
++    });
++cmp_tree(
++    msg => 'toggle split v inside tabbed',
++    layout_before => 'H[a*]',
++    layout_after => 'T[V[a*]]',
++    cb => sub {
++        cmd 'layout tabbed, split v, layout tabbed, split v';
++    });
++cmp_tree(
++    msg => 'tabbed with 2 nodes inside other tabbed',
++    layout_before => 'T[a*]',
++    layout_after => 'T[T[a b*]]',
++    cb => sub {
++        cmd 'split v';
++        open_window(wm_class => "b", name => "b");
++        cmd 'layout tabbed';
++    });
++
++done_testing;
