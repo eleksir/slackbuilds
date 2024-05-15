@@ -24,8 +24,8 @@
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 PRGNAM=deadbeef
-VERSION=${VERSION:-1.8.8}
-BUILD=${BUILD:-2}
+VERSION=${VERSION:-1.9.5}
+BUILD=${BUILD:-1}
 TAG=${TAG:-_EXs}
 
 if [ -z "$ARCH" ]; then
@@ -87,6 +87,7 @@ CXXFLAGS="$CFLAGS" \
   --libdir=/usr/lib${LIBDIRSUFFIX} \
   --docdir=/usr/doc/$PRGNAM-$VERSION \
   --enable-shared \
+  --disable-nls \
   --build=$ARCH-slackware-linux
 
 make -j$(nproc)
