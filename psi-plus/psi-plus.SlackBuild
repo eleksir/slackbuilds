@@ -25,7 +25,7 @@
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 PRGNAM=psi-plus
-VERSION=${VERSION:-1.5.1652}
+VERSION=${VERSION:-1.5.1886}
 BUILD=${BUILD:-1}
 TAG=${TAG:-_EXs}
 
@@ -59,7 +59,7 @@ rm -rf $PKG
 mkdir -p $TMP $PKG $OUTPUT
 cd $TMP
 rm -rf $PRGNAM-$VERSION
-tar xf $CWD/$PRGNAM-$VERSION.tar.gz
+tar xf $CWD/$VERSION.tar.gz
 cd $PRGNAM-snapshots-$VERSION
 chown -R root:root .
 find -L . \
@@ -68,24 +68,25 @@ find -L . \
  \( -perm 666 -o -perm 664 -o -perm 600 -o -perm 444 -o -perm 440 -o -perm 400 \) \
  -exec chmod 644 {} \;
 
-export CFLAGS="-g $SLKFLAGS -rdynamic"
-export CXXFLAGS="-g $SLKFLAGS -rdynamic"
-export LDFLAGS="-rdynamic -Wl,--export-dynamic -Wl,-E -Wl,--no-as-needed -Wl,-O2"
+export CFLAGS="-g $SLKFLAGS"
+export CXXFLAGS="-g $SLKFLAGS"
 mkdir build
 cd build
 cmake \
- -DCMAKE_C_FLAGS:STRING="-g $SLKCFLAGS -rdynamic" \
- -DCMAKE_CXX_FLAGS:STRING="-g $SLKCFLAGS -rdynamic" \
- -DLINK_FLAGS:STRING="-rdynamic -Wl,--export-dynamic -Wl,-E -Wl,--no-as-needed -Wl,-O2" \
  -DUSE_CCACHE=ON \
- -DBUILD_IRIS_TOOLS=OFF \
+ -DBUILD_IRIS_TOOLS=ON \
  -DBUILD_PSIMEDIA=OFF \
  -DBUNDLED_IRIS=ON \
- -DBUNDLED_USRSCTP=OFF \
+ -DIRIS_BUNDLED_USRSCTP=ON \
+ -DBUNDLED_USRSCTP=ON \
  -DCMAKE_INSTALL_PREFIX=/usr \
  -DENABLE_PLUGINS=ON \
+ -DBUILD_PLUGINS="-chessplugin;-otrplugin;-birthdayreminderplugin;-cleanerplugin;-clientswitcherplugin;-omemoplugin;-psimedia;-videostatusplugin;-battleshipgameplugin;-noughtsandcrossesplugin;-gnome3supportplugin" \
  -DJINGLE_SCTP=OFF \
- -DPLUGINS_NO_DEBUG=ON \
+ -DPLUGINS_NO_DEBUG=OFF \
+ -DBUNDLED_OMEMO_C_ALL=ON \
+ -DUSE_ASPELL=ON \
+ -DUSE_HUNSPELL=OFF \
  -DPSI_LIBDIR=/usr/lib${LIBDIRSUFFIX}/psi \
 ..
 
