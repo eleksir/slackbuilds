@@ -3,7 +3,7 @@
 # Slackware build script for tor
 #
 # Copyright 2011-2012 Marco Bonetti <sid77@slackware.it>
-# Copyright Sergei Fedosoff <eleksir@gmail.com>
+# Copyright 2020 Sergei Fedosoff <eleksir@gmail.com>
 #
 # All rights reserved.
 #
@@ -29,7 +29,7 @@
 # Updated by Markus Reichelt slackbuilds@mareichelt.de
 
 PRGNAM=tor
-VERSION=${VERSION:-0.4.7.13}
+VERSION=${VERSION:-0.4.8.11}
 BUILD=${BUILD:-1}
 TAG=${TAG:-_EXs}
 
