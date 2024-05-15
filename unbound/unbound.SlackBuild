@@ -25,7 +25,7 @@
 #  ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 PRGNAM=unbound
-VERSION=${VERSION:-1.19.0}
+VERSION=${VERSION:-1.20.0}
 BUILD=${BUILD:-1}
 TAG=${TAG:-_EXs}
 
@@ -54,23 +54,6 @@ elif [ "$ARCH" = "x86_64" ]; then
 else
   SLKCFLAGS="-O2"
   LIBDIRSUFFIX=""
-fi
-
-UB_USER=${UB_USER:-unbound}
-UB_GROUP=${UB_GROUP:-unbound}
-
-# Check the system user and group for unbound:
-if ! grep -q ^"$UB_GROUP": /etc/group ; then
-  echo "  You will need a dedicated group to run unbound"
-  echo "    # groupadd -g 304 $UB_GROUP"
-  echo "  should do the job."
-  exit 1
-fi
-
-if ! grep -q ^"$UB_USER": /etc/passwd ; then
-  echo "  You will need a dedicated user to run unbound, something like"
-  echo "    # useradd -r -u 304 -g $UB_GROUP -d /var/lib/unbound/ -s /sbin/nologin -c 'Unbound DNS resolver' $UB_USER"
-  exit 1
 fi
 
 set -e
@@ -106,10 +89,13 @@ LDFLAGS="-flto -rdynamic -Wl,--export-dynamic -Wl,-E -Wl,--no-as-needed -Wl,-O2"
   --docdir=/usr/doc/$PRGNAM-$VERSION \
   --with-libevent \
   --with-ssl \
-  --with-username=$UB_USER \
-  --with-pidfile=/var/run/unbound/unbound.pid \
+  --with-username=named \
+  --with-pidfile=/run/unbound/unbound.pid \
   --build=$ARCH-slackware-linux \
-  $DNSCRYPT 
+  --enable-tfo-client \
+  --enable-tfo-server \
+  --disable-explicit-port-randomisation \
+  $DNSCRYPT
 
 make -j$(nproc)
 make install DESTDIR=$PKG
