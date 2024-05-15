@@ -33,8 +33,8 @@
 cd $(dirname $0) ; CWD=$(pwd)
 
 PRGNAM=axel
-VERSION=${VERSION:-2.17.11}
-BUILD=${BUILD:-2}
+VERSION=${VERSION:-2.17.14}
+BUILD=${BUILD:-1}
 TAG=${TAG:-_EXs}
 PKGTYPE=${PKGTYPE:-tgz}
 
@@ -75,7 +75,7 @@ rm -rf $PKG
 mkdir -p $TMP $PKG $OUTPUT
 cd $TMP
 rm -rf $PRGNAM-$VERSION
-tar xf $CWD/$PRGNAM-$VERSION.tar.gz
+tar xf $CWD/$PRGNAM-$VERSION.tar.xz
 cd $PRGNAM-$VERSION
 chown -R root:root .
 find -L . \
