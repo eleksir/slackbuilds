@@ -25,7 +25,7 @@
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 PRGNAM=pv
-VERSION=${VERSION:-1.6.20}
+VERSION=${VERSION:-1.8.9}
 BUILD=${BUILD:-1}
 TAG=${TAG:-_EXs}
 
@@ -42,8 +42,6 @@ TMP=${TMP:-/tmp/EXs}
 PKG=$TMP/package-$PRGNAM
 OUTPUT=${OUTPUT:-/tmp}
 
-DOCS="COPYING INSTALL NEWS PACKAGE TODO VERSION"
-
 if [ "$ARCH" = "i586" ]; then
   SLKCFLAGS="-O2 -march=i586 -mtune=i686"
 elif [ "$ARCH" = "i686" ]; then
@@ -58,7 +56,7 @@ rm -rf $PKG
 mkdir -p $TMP $PKG $OUTPUT
 cd $TMP
 rm -rf $PRGNAM-$VERSION
-tar xf $CWD/$PRGNAM-$VERSION.tar.bz2
+tar xf $CWD/$PRGNAM-$VERSION.tar.gz
 cd $PRGNAM-$VERSION
 chown -R root:root .
 find -L . \
@@ -85,13 +83,13 @@ find $PKG -print0 | xargs -0 file | grep -e "executable" -e "shared object" | gr
 find $PKG/usr/man -type f -exec gzip -9 {} \;
 for i in $( find $PKG/usr/man -type l ) ; do ln -s $( readlink $i ).gz $i.gz ; rm $i ; done
 
-mkdir -p $PKG/usr/doc/$PRGNAM-$VERSION
-( cd $TMP/$PRGNAM-$VERSION/doc
-  cp -a $DOCS $PKG/usr/doc/$PRGNAM-$VERSION )
-cat $CWD/$PRGNAM.SlackBuild > $PKG/usr/doc/$PRGNAM-$VERSION/$PRGNAM.SlackBuild
+install -dm 0755 $PKG/usr/doc/$PRGNAM-$VERSION
+install -Dpm 0644 README.md docs/*.md docs/COPYING docs/INSTALL $PKG/usr/doc/$PRGNAM-$VERSION/
+rm -rf $PKG/usr/share/doc
 
-mkdir -p $PKG/install
-cat $CWD/slack-desc > $PKG/install/slack-desc
+install -Dpm 0644 $CWD/$PRGNAM.SlackBuild $PKG/usr/doc/$PRGNAM-$VERSION/$PRGNAM.SlackBuild
+
+install -Dpm 0644 $CWD/slack-desc $PKG/install/slack-desc
 
 cd $PKG
 /sbin/makepkg -l y -c n $OUTPUT/$PRGNAM-$VERSION-$ARCH-$BUILD$TAG.${PKGTYPE:-tgz}
