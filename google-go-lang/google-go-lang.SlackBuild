@@ -29,8 +29,10 @@
 # SOFTWARE.
 
 PRGNAM=google-go-lang
-VERSION=${VERSION:-1.21.8}
-BOOTSTRAP_VERSION=1.18.10
+VERSION=${VERSION:-1.22.5}
+BOOTSTRAP1_VERSION=1.18.10
+BOOTSTRAP2_VERSION=1.21.12
+BOOTSTRAP3_VERSION=1.22.5
 BUILD=${BUILD:-1}
 TAG=${TAG:-_EXs}
 
@@ -65,16 +67,15 @@ CWD=$(pwd)
 TMP=${TMP:-/tmp/SBo}
 PKG=$TMP/package-$PRGNAM
 OUTPUT=${OUTPUT:-/tmp}
-BOOTSTRAP_DIR="${TMP}/bootstrap-go${BOOTSTRAP_VERSION}"
+BOOTSTRAP1_DIR="${TMP}/bootstrap-go${BOOTSTRAP1_VERSION}"
+BOOTSTRAP2_DIR="${TMP}/bootstrap-go${BOOTSTRAP2_VERSION}"
+BOOTSTRAP3_DIR="${TMP}/bootstrap-go${BOOTSTRAP3_VERSION}"
 
 set -e
 
 rm -rf $PKG
-mkdir -p "$BOOTSTRAP_DIR" $PKG/usr/lib${LIBDIRSUFFIX}/go${VERSION} $OUTPUT
-cd "$BOOTSTRAP_DIR"
-tar xf $CWD/go${BOOTSTRAP_VERSION}.src.tar.gz
-cd go
-chown -R root:root .
+mkdir -p $PKG/usr/lib${LIBDIRSUFFIX}/go${VERSION} $OUTPUT
+
 cd $PKG/usr/lib${LIBDIRSUFFIX}/go${VERSION}
 tar xf $CWD/go${VERSION}.src.tar.gz
 cd go
@@ -85,24 +86,74 @@ find -L . \
  \( -perm 666 -o -perm 664 -o -perm 640 -o -perm 600 -o -perm 444 \
  -o -perm 440 -o -perm 400 \) -exec chmod 644 {} \+
 
-# as of >= go1.5, the cross-compiler does not need to be bootstrap, so the
-# compiler need only be compiled for the host OS, which it detects
-unset GOBIN GOPATH GOOS GOARCH CGO_ENABLED
+ORIG_PATH="${PATH}"
 
-# Now go requires at least 1.17.something api to build, so we have to bootstrap bootstrap compiler
-cd "${BOOTSTRAP_DIR}/go"
-export GOROOT_BOOTSTRAP="/usr" # gcc 5+ is go1.4 API, so we'll bootstrap with it
-export GOROOT="$(pwd)"
-export GOROOT_FINAL="${BOOTSTRAP_DIR}/go"
-cd src
-LC_ALL=C ./make.bash
-$GOROOT/bin/go install std
+echo ""
+echo "Building 1-st bootstrap compiler, ${BOOTSTRAP1_VERSION}"
+mkdir -p "${BOOTSTRAP1_DIR}"
+pushd "${BOOTSTRAP1_DIR}"
+	tar xf $CWD/go${BOOTSTRAP1_VERSION}.src.tar.gz
+	pushd go
+		chown -R root:root .
+		unset GOBIN GOPATH GOOS GOARCH CGO_ENABLED
+		export GOROOT_BOOTSTRAP="/usr" # gcc 5+ is go1.4 API, so we'll bootstrap with it
+		export GOROOT="$(pwd)"
+		export GOROOT_FINAL="${BOOTSTRAP1_DIR}/go"
+		pushd src
+			LC_ALL=C ./make.bash
+			$GOROOT/bin/go install std
+		popd
+	popd
+popd
+
+# Time to build 2-nd bootstrap compiler
+echo ""
+echo "Building 2-nd bootstrap compiler, ${BOOTSTRAP2_VERSION}"
+mkdir -p "${BOOTSTRAP2_DIR}"
+pushd "$BOOTSTRAP2_DIR"
+	tar xf "${CWD}/go${BOOTSTRAP2_VERSION}.src.tar.gz"
+	pushd go
+		chown -R root:root .
+		export PATH="${BOOTSTRAP1_DIR}/go/bin:${ORIG_PATH}"
+		unset GOBIN GOPATH GOOS GOARCH CGO_ENABLED
+		export GOROOT_BOOTSTRAP="$BOOTSTRAP1_DIR/go"
+		export GOROOT="$(pwd)"
+		export GOROOT_FINAL="${BOOTSTRAP2_DIR}/go"
+		pushd src
+			LC_ALL=C ./make.bash
+			$GOROOT/bin/go install std
+		popd
+	popd
+popd
+
+# Time to build 3-rd bootstrap compiler
+echo ""
+echo "Building 3-rd bootstrap compiler, ${BOOTSTRAP3_VERSION}"
+mkdir -p "${BOOTSTRAP3_DIR}"
+pushd "$BOOTSTRAP3_DIR"
+	tar xf "${CWD}/go${BOOTSTRAP3_VERSION}.src.tar.gz"
+	pushd go
+		chown -R root:root .
+		export PATH="${BOOTSTRAP2_DIR}/go/bin:${ORIG_PATH}"
+		unset GOBIN GOPATH GOOS GOARCH CGO_ENABLED
+		export GOROOT_BOOTSTRAP="$BOOTSTRAP2_DIR/go"
+		export GOROOT="$(pwd)"
+		export GOROOT_FINAL="${BOOTSTRAP3_DIR}/go"
+		pushd src
+			LC_ALL=C ./make.bash
+			$GOROOT/bin/go install std
+		popd
+	popd
+popd
+
 
 # Time to build target compiler
-export PATH="${TMP}/bootstrap-go/go/bin:${PATH}"
+echo ""
+echo "Building target compiler, ${BOOTSTRAP3_VERSION}"
+export PATH="${BOOTSTRAP3_DIR}/go/bin:${PATH}"
 cd "$PKG/usr/lib${LIBDIRSUFFIX}/go${VERSION}/go"
 unset GOBIN GOPATH GOOS GOARCH CGO_ENABLED
-export GOROOT_BOOTSTRAP="$BOOTSTRAP_DIR/go"
+export GOROOT_BOOTSTRAP="$BOOTSTRAP3_DIR/go"
 export GOROOT="$(pwd)"
 export GOROOT_FINAL="/usr/lib${LIBDIRSUFFIX}/go${VERSION}/go"
 export GO_LDFLAGS="-s -w"
