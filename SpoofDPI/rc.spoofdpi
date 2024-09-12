@@ -1,0 +1,82 @@
+#!/bin/sh
+
+# Copyright 2024 Sergei Fedosoff <eleksir@gmail.com>
+#
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are
+# met:
+#
+# * Redistributions of source code must retain the above copyright
+# notice, this list of conditions and the following disclaimer.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+# "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+# LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+# A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+# OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+# SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+# LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+# THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+# (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+
+source /etc/defaults/spoofdpi
+PIDFILE="/run/spoofdpi.pid"
+
+_start() {
+    # make sure bitlbee isn't running yet
+    if [ ! -f $PIDFILE ]; then
+       /usr/sbin/daemonize -p $PIDFILE -- /usr/sbin/spoofdpi $OPTIONS
+    else
+        echo "spoofdpi is already active and running under PID: $(cat $PIDFILE)"
+        echo "if you think this is wrong, remove the offending PID file"
+        echo "and restart spoof"
+        exit 1
+    fi
+}
+
+_stop() {
+    echo -n "Stopping spoofdpi..."
+
+    if [ -r $PIDFILE ]; then
+        kill $(cat $PIDFILE)
+
+        for i in 1 2 3; do
+            if [ -f $PIDFILE ]; then
+                sleep 1
+            fi
+        done
+
+        if [ -r $PIDFILE ]; then
+            kill -9 $(cat $PIDFILE) 2>/dev/null
+            rm $PIDFILE
+        fi
+
+        echo "done"
+    else
+       echo "Unable to find $PIDFILE and stop spoofdpi"
+    fi
+}
+
+# Let's see how we are being called.
+case "$1" in
+  start)
+    _start
+    ;;
+  stop)
+    _stop
+    ;;
+  restart)
+    _stop
+    sleep 3
+    _start
+    ;;
+  *)
+    echo "Usage: $(basename $0) {start|stop|restart}"
+    exit 1
+    ;;
+esac

@@ -1,0 +1,2 @@
+# Options for running SpoofDPI daemon
+OPTIONS="-addr 127.0.0.1 -port 8080 -no-banner -system-proxy false"
