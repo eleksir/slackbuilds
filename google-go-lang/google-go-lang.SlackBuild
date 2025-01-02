@@ -29,10 +29,11 @@
 # SOFTWARE.
 
 PRGNAM=google-go-lang
-VERSION=${VERSION:-1.22.8}
+VERSION=${VERSION:-1.23.4}
 BOOTSTRAP1_VERSION=1.18.10
 BOOTSTRAP2_VERSION=1.21.13
-BOOTSTRAP3_VERSION=$VERSION
+BOOTSTRAP3_VERSION=1.22.10
+BOOTSTRAP4_VERSION=$VERSION
 BUILD=${BUILD:-1}
 TAG=${TAG:-_EXs}
 
@@ -70,6 +71,7 @@ OUTPUT=${OUTPUT:-/tmp}
 BOOTSTRAP1_DIR="${TMP}/bootstrap-go${BOOTSTRAP1_VERSION}"
 BOOTSTRAP2_DIR="${TMP}/bootstrap-go${BOOTSTRAP2_VERSION}"
 BOOTSTRAP3_DIR="${TMP}/bootstrap-go${BOOTSTRAP3_VERSION}"
+BOOTSTRAP4_DIR="${TMP}/bootstrap-go${BOOTSTRAP4_VERSION}"
 
 set -e
 
@@ -146,14 +148,34 @@ pushd "$BOOTSTRAP3_DIR"
 	popd
 popd
 
+# Time to build 4-th bootstrap compiler
+echo ""
+echo "Building 4-th bootstrap compiler, ${BOOTSTRAP3_VERSION}"
+mkdir -p "${BOOTSTRAP4_DIR}"
+pushd "$BOOTSTRAP4_DIR"
+	tar xf "${CWD}/go${BOOTSTRAP4_VERSION}.src.tar.gz"
+	pushd go
+		chown -R root:root .
+		export PATH="${BOOTSTRAP3_DIR}/go/bin:${ORIG_PATH}"
+		unset GOBIN GOPATH GOOS GOARCH CGO_ENABLED
+		export GOROOT_BOOTSTRAP="$BOOTSTRAP3_DIR/go"
+		export GOROOT="$(pwd)"
+		export GOROOT_FINAL="${BOOTSTRAP4_DIR}/go"
+		pushd src
+			LC_ALL=C ./make.bash
+			$GOROOT/bin/go install std
+		popd
+	popd
+popd
+
 
 # Time to build target compiler
 echo ""
-echo "Building target compiler, ${BOOTSTRAP3_VERSION}"
-export PATH="${BOOTSTRAP3_DIR}/go/bin:${PATH}"
+echo "Building target compiler, ${BOOTSTRAP4_VERSION}"
+export PATH="${BOOTSTRAP4_DIR}/go/bin:${PATH}"
 cd "$PKG/usr/lib${LIBDIRSUFFIX}/go${VERSION}/go"
 unset GOBIN GOPATH GOOS GOARCH CGO_ENABLED
-export GOROOT_BOOTSTRAP="$BOOTSTRAP3_DIR/go"
+export GOROOT_BOOTSTRAP="$BOOTSTRAP4_DIR/go"
 export GOROOT="$(pwd)"
 export GOROOT_FINAL="/usr/lib${LIBDIRSUFFIX}/go${VERSION}/go"
 export GO_LDFLAGS="-s -w"
