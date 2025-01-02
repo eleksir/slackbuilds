@@ -28,8 +28,8 @@
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 PRGNAM=i3
-VERSION=${VERSION:-4.23}
-BUILD=${BUILD:-2}
+VERSION=${VERSION:-4.24}
+BUILD=${BUILD:-1}
 TAG=${TAG:-_EXs}
 
 if [ -z "$ARCH" ]; then
@@ -74,9 +74,6 @@ find -L . \
  \( -perm 666 -o -perm 664 -o -perm 640 -o -perm 600 -o -perm 444 \
   -o -perm 440 -o -perm 400 \) -exec chmod 644 {} \+
 
-patch -p1 -i $CWD/f8befe378ab3c9f8d035657ca0247c9b8c242b6b.patch
-patch -p1 -i $CWD/b660d6a902cf44be22c434101dd2a4e6743e26bc.patch
-
 # Configure, build, and install:
 export CFLAGS="-g3 $SLKCFLAGS -flto -rdynamic"
 export CXXFLAGS="-g3 $SLKCFLAGS -flto -rdynamic"
@@ -115,9 +112,7 @@ mkdir -p $PKG/usr/share/apps/kdm/sessions
 ln -s /usr/share/xsessions/i3.desktop $PKG/usr/share/apps/kdm/sessions/
 
 # Install an xinitrc script
-mkdir -p $PKG/etc/X11/xinit
-cat $CWD/xinitrc.i3 > $PKG/etc/X11/xinit/xinitrc.i3
-chmod 0755 $PKG/etc/X11/xinit/xinitrc.i3
+install -Dpm 0755 $CWD/xinitrc.i3 $PKG/etc/X11/xinit/xinitrc.i3
 
 mkdir -p $PKG/usr/doc/$PRGNAM-$VERSION/html $PKG/usr/doc/$PRGNAM-$VERSION/txt
 cp -a DEPENDS LICENSE RELEASE-NOTES-* $PKG/usr/doc/$PRGNAM-$VERSION
@@ -135,7 +130,6 @@ perl Makefile.PL \
   INSTALLVENDORMAN1DIR=/usr/man/man1 \
   INSTALLVENDORMAN3DIR=/usr/man/man3
 make -j$(nproc)
-#make test
 make install DESTDIR=$PKG
 
 find $PKG -name perllocal.pod -o -name ".packlist" -o -name "*.bs" | xargs rm -f || true
@@ -145,16 +139,17 @@ cp -a Changes README MANIFEST $PKG/usr/doc/$PRGNAM-$VERSION/AnyEvent-I3/
 
 # man pages
 find $PKG/usr/man -type f -exec gzip -9 {} +
-for i in $( find $PKG/usr/man -type l ) ; do ln -s $( readlink $i ).gz $i.gz ; rm $i ; done
+for i in $( find $PKG/usr/man -type l ); do
+    ln -s $( readlink $i ).gz $i.gz
+    rm $i
+done
 
 find $PKG -depth -type d -empty -delete || true
 
 install -Dpm 0644 $CWD/$PRGNAM.SlackBuild $PKG/usr/doc/$PRGNAM-$VERSION/$PRGNAM.SlackBuild
-
-mkdir -p $PKG/install
-install -Dpm 0644 $CWD/slack-desc     $PKG/install/slack-desc
-install -Dpm 0644 $CWD/doinst.sh      $PKG/install/doinst.sh
-install -Dpm 0644 $CWD/slack-required $PKG/install/slack-required
+install -Dpm 0644 $CWD/slack-desc         $PKG/install/slack-desc
+install -Dpm 0644 $CWD/doinst.sh          $PKG/install/doinst.sh
+install -Dpm 0644 $CWD/slack-required     $PKG/install/slack-required
 
 cd $PKG
 /sbin/makepkg -l y -c n $OUTPUT/$PRGNAM-$VERSION-$ARCH-$BUILD$TAG.${PKGTYPE:-tgz}
