@@ -59,7 +59,7 @@ rm -rf $PKG
 mkdir -p $TMP $PKG $OUTPUT
 cd $TMP
 rm -rf $PRGNAM-$VERSION
-tar xf $CWD/$VERSION.tar.gz
+tar xf $CWD/$PRGNAM-snapshots-$VERSION.tar.gz
 cd $PRGNAM-snapshots-$VERSION
 chown -R root:root .
 find -L . \
