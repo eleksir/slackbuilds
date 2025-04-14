@@ -29,11 +29,13 @@
 # SOFTWARE.
 
 PRGNAM=google-go-lang
-VERSION=${VERSION:-1.23.6}
+VERSION=${VERSION:-1.24.2}
+BOOTSTRAP0_VERSION=1.4-bootstrap-20171003
 BOOTSTRAP1_VERSION=1.18.10
 BOOTSTRAP2_VERSION=1.21.13
 BOOTSTRAP3_VERSION=1.22.10
-BOOTSTRAP4_VERSION=$VERSION
+BOOTSTRAP4_VERSION=1.23.8
+BOOTSTRAP5_VERSION=$VERSION
 BUILD=${BUILD:-1}
 TAG=${TAG:-_EXs}
 
@@ -68,10 +70,12 @@ CWD=$(pwd)
 TMP=${TMP:-/tmp/SBo}
 PKG=$TMP/package-$PRGNAM
 OUTPUT=${OUTPUT:-/tmp}
+BOOTSTRAP0_DIR="${TMP}/bootstrap-go${BOOTSTRAP0_VERSION}"
 BOOTSTRAP1_DIR="${TMP}/bootstrap-go${BOOTSTRAP1_VERSION}"
 BOOTSTRAP2_DIR="${TMP}/bootstrap-go${BOOTSTRAP2_VERSION}"
 BOOTSTRAP3_DIR="${TMP}/bootstrap-go${BOOTSTRAP3_VERSION}"
 BOOTSTRAP4_DIR="${TMP}/bootstrap-go${BOOTSTRAP4_VERSION}"
+BOOTSTRAP5_DIR="${TMP}/bootstrap-go${BOOTSTRAP5_VERSION}"
 
 set -e
 
@@ -90,11 +94,13 @@ find -L . \
 
 ORIG_PATH="${PATH}"
 
+export MAKEFLAGS="-j 16"
+
 echo ""
-echo "Building 1-st bootstrap compiler, ${BOOTSTRAP1_VERSION}"
-mkdir -p "${BOOTSTRAP1_DIR}"
-pushd "${BOOTSTRAP1_DIR}"
-	tar xf $CWD/go${BOOTSTRAP1_VERSION}.src.tar.gz
+echo "Building 0-th bootstrap compiler, ${BOOTSTRAP0_VERSION}"
+mkdir -p "${BOOTSTRAP0_DIR}"
+pushd "${BOOTSTRAP0_DIR}"
+	tar xf $CWD/go${BOOTSTRAP0_VERSION}.tar.gz
 	pushd go
 		chown -R root:root .
 		unset GOBIN GOPATH GOOS GOARCH CGO_ENABLED
@@ -104,6 +110,25 @@ pushd "${BOOTSTRAP1_DIR}"
 		pushd src
 			LC_ALL=C ./make.bash
 			$GOROOT/bin/go install std
+		popd
+	popd
+popd
+
+echo ""
+echo "Building 1-st bootstrap compiler, ${BOOTSTRAP1_VERSION}"
+mkdir -p "${BOOTSTRAP1_DIR}"
+pushd "${BOOTSTRAP1_DIR}"
+	tar xf $CWD/go${BOOTSTRAP1_VERSION}.src.tar.gz
+	pushd go
+		chown -R root:root .
+		export PATH="${BOOTSTRAP0_DIR}/go/bin:${ORIG_PATH}"
+		unset GOBIN GOPATH GOOS GOARCH CGO_ENABLED
+		export GOROOT_BOOTSTRAP="$BOOTSTRAP0_DIR/go"
+		export GOROOT="$(pwd)"
+		export GOROOT_FINAL="${BOOTSTRAP1_DIR}/go"
+		pushd src
+			LC_ALL=C ./make.bash
+			$GOROOT/bin/go install -buildmode=exe std
 		popd
 	popd
 popd
@@ -123,7 +148,7 @@ pushd "$BOOTSTRAP2_DIR"
 		export GOROOT_FINAL="${BOOTSTRAP2_DIR}/go"
 		pushd src
 			LC_ALL=C ./make.bash
-			$GOROOT/bin/go install std
+			$GOROOT/bin/go install -buildmode=exe std
 		popd
 	popd
 popd
@@ -143,14 +168,14 @@ pushd "$BOOTSTRAP3_DIR"
 		export GOROOT_FINAL="${BOOTSTRAP3_DIR}/go"
 		pushd src
 			LC_ALL=C ./make.bash
-			$GOROOT/bin/go install std
+			$GOROOT/bin/go install -buildmode=exe std
 		popd
 	popd
 popd
 
 # Time to build 4-th bootstrap compiler
 echo ""
-echo "Building 4-th bootstrap compiler, ${BOOTSTRAP3_VERSION}"
+echo "Building 4-th bootstrap compiler, ${BOOTSTRAP4_VERSION}"
 mkdir -p "${BOOTSTRAP4_DIR}"
 pushd "$BOOTSTRAP4_DIR"
 	tar xf "${CWD}/go${BOOTSTRAP4_VERSION}.src.tar.gz"
@@ -163,7 +188,27 @@ pushd "$BOOTSTRAP4_DIR"
 		export GOROOT_FINAL="${BOOTSTRAP4_DIR}/go"
 		pushd src
 			LC_ALL=C ./make.bash
-			$GOROOT/bin/go install std
+			$GOROOT/bin/go install -buildmode=exe std
+		popd
+	popd
+popd
+
+# Time to build 5-th bootstrap compiler
+echo ""
+echo "Building 5-th bootstrap compiler, ${BOOTSTRAP5_VERSION}"
+mkdir -p "${BOOTSTRAP5_DIR}"
+pushd "$BOOTSTRAP5_DIR"
+	tar xf "${CWD}/go${BOOTSTRAP5_VERSION}.src.tar.gz"
+	pushd go
+		chown -R root:root .
+		export PATH="${BOOTSTRAP4_DIR}/go/bin:${ORIG_PATH}"
+		unset GOBIN GOPATH GOOS GOARCH CGO_ENABLED
+		export GOROOT_BOOTSTRAP="$BOOTSTRAP4_DIR/go"
+		export GOROOT="$(pwd)"
+		export GOROOT_FINAL="${BOOTSTRAP5_DIR}/go"
+		pushd src
+			LC_ALL=C ./make.bash
+			$GOROOT/bin/go install -buildmode=exe std
 		popd
 	popd
 popd
@@ -171,15 +216,15 @@ popd
 
 # Time to build target compiler
 echo ""
-echo "Building target compiler, ${BOOTSTRAP4_VERSION}"
-export PATH="${BOOTSTRAP4_DIR}/go/bin:${PATH}"
+echo "Building target compiler, ${BOOTSTRAP5_VERSION}"
+export PATH="${BOOTSTRAP5_DIR}/go/bin:${PATH}"
 cd "$PKG/usr/lib${LIBDIRSUFFIX}/go${VERSION}/go"
 unset GOBIN GOPATH GOOS GOARCH CGO_ENABLED
-export GOROOT_BOOTSTRAP="$BOOTSTRAP4_DIR/go"
+export GOROOT_BOOTSTRAP="$BOOTSTRAP5_DIR/go"
 export GOROOT="$(pwd)"
 export GOROOT_FINAL="/usr/lib${LIBDIRSUFFIX}/go${VERSION}/go"
 export GO_LDFLAGS="-s -w"
-export GO_GCFLAGS="-trimpath"
+export GO_GCFLAGS="-trimpath -buildvcs=false"
 
 cd src
 
@@ -192,7 +237,7 @@ else
 fi
 
 # As of go1.5, golang supports shared libraries, so generate them for use.
-$GOROOT/bin/go install -buildmode=shared std
+$GOROOT/bin/go install -ldflags="-s -w" -a -gcflags=all=-l -trimpath std
 
 cd ..
 
