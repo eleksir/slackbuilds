@@ -28,7 +28,7 @@
 cd $(dirname $0) ; CWD=$(pwd)
 
 PRGNAM=weechat
-VERSION=${VERSION:-4.2.2}
+VERSION=${VERSION:-4.5.1}
 BUILD=${BUILD:-1}
 TAG=${TAG:-_EXs}
 PKGTYPE=${PKGTYPE:-tgz}
@@ -85,6 +85,7 @@ cd build
     -DCMAKE_INSTALL_PREFIX=/usr \
     -DENABLE_LUA=OFF \
     -DENABLE_JAVASCRIPT=OFF \
+    -DENABLE_CJSON=OFF \
     -DENABLE_PHP=OFF \
     -DENABLE_DOC=OFF \
     -DENABLE_MAN=ON \
@@ -106,7 +107,7 @@ mkdir -p $PKG/usr/share/pixmaps
 ln -s ../icons/hicolor/32x32/apps/$PRGNAM.png $PKG/usr/share/pixmaps/$PRGNAM.png
 
 mkdir -p "$PKG/usr/doc/$PRGNAM-$VERSION"
-cp -a COPYING *.adoc "$PKG/usr/doc/$PRGNAM-$VERSION"
+cp -a COPYING AUTHORS.md CHANGELOG.md README.md UPGRADING.md "$PKG/usr/doc/$PRGNAM-$VERSION"
 cat $CWD/$PRGNAM.SlackBuild > "$PKG/usr/doc/$PRGNAM-$VERSION/$PRGNAM.SlackBuild"
 
 mkdir -p $PKG/install
