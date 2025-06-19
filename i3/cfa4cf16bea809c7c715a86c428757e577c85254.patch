@@ -1,0 +1,311 @@
+From cfa4cf16bea809c7c715a86c428757e577c85254 Mon Sep 17 00:00:00 2001
+From: Sergey Vlasov <sigprof@gmail.com>
+Date: Tue, 22 Apr 2025 00:26:17 +0300
+Subject: [PATCH] Set `_NET_FRAME_EXTENTS` according to the actual decoration
+ size (#5944)
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Inspired by #5384, but instead of just using the border width, this PR
+reports the actual frame extents for the window, which may also include
+the title bar (for floating windows and tiled windows in plain split
+containers, but not for tiled windows in stacked/tabbed containers).
+
+The existing `con_border_style_rect()` function should already handle
+all configuration options which can affect the decoration sizes (if it
+does not, that would also show up in other places); its result just
+needs to be converted into the format used by the `_NET_FRAME_EXTENTS`
+property.
+
+This PR fixes #4292 probably in the best way possible (the reported
+`_NET_FRAME_EXTENTS` values should always match the actual sizes of
+window frame elements which are actually drawn into the X11 frame window
+into which the client window is reparented). The only really problematic
+case is with the stacked/tabbed containers, for which the title bar is
+actually drawn into a completely separate window, therefore the title
+bar size cannot be reported in `_NET_FRAME_EXTENTS` (actually I tried to
+calculate the size of those decorations and add it to the top decoration
+size, but that did not change the behavior of `picom`).
+
+<details><summary>Large screenshots here (3840×2160)</summary>
+
+Example of configuration with `hide_edge_borders smart` — a single
+window does not have borders, so only the top frame size is non-zero:
+
+![2024-03-09_21-41](https://github.com/i3/i3/assets/616082/d2f41206-89f8-465f-ba25-1f51075ba680)
+
+but multiple windows have borders:
+
+![2024-03-09_21-44](https://github.com/i3/i3/assets/616082/db7469e6-50eb-4687-83fd-88481691b361)
+
+Changing border width works too (although with `border normal 8` you can
+see that the top border overlaps the title text, because on the i3 side
+that border does not really exists, and `picom` just draws it over; also
+the pixel sizes reported by `xprop` and `xwininfo` are not identical to
+what is specified in i3, because I use 168 dpi on this system, therefore
+4 px in the i3 config = 7 dpx):
+
+![2024-03-09_21-48](https://github.com/i3/i3/assets/616082/7f64d217-3218-4d03-ba15-3fe33e6161d1)
+
+Handling of tabbed containers is less perfect though. Here is a single
+tabbed container with `hide_edge_borders smart`, so it does not really
+have a border — note that all frame extents are zero, and the titlebar
+is rounded separately (although it could easily be excluded from
+rounding, that does not really help much):
+
+![2024-03-09_22-02](https://github.com/i3/i3/assets/616082/c6ea1106-b1d7-43b8-8354-bc6fbf45d87a)
+
+Once the border actually appears, you may notice that the top part of
+the `picom` border actually gets drawn over the top part of the window,
+partially obscuring the top line in this terminal (`picom` does not mind
+that the top frame size is reported as 0):
+
+![2024-03-09_22-04](https://github.com/i3/i3/assets/616082/eb80fc5c-fa52-43f4-857e-94dc713221bf)
+
+Some examples of floating windows (no major problems there):
+
+![2024-03-09_22-09](https://github.com/i3/i3/assets/616082/3336c1cb-ee48-46ae-ab89-061be46bdb31)
+
+Options like `hide_edge_borders both` work too when gaps are removed
+(although the resulting behavior with `picom` is probably not very
+useful — the rounded border gets drawn only if all of the left, bottom
+and right borders are present):
+
+![2024-03-09_22-15](https://github.com/i3/i3/assets/616082/9961db74-7c49-43f0-a90f-e9ab81474038)
+
+The same with `border pixel 8` (note that windows with only the top
+border hidden still get the rounded border treatment by `picom`, but the
+border overlaps the top part of the window):
+
+![2024-03-09_22-21](https://github.com/i3/i3/assets/616082/dd0a0fc6-701d-4e01-ba96-f3eb5131c95b)
+
+</details>
+
+---------
+
+Signed-off-by: Sergey Vlasov <sigprof@gmail.com>
+Co-authored-by: Orestis Floros <orestisflo@gmail.com>
+---
+ .../changes/5-set-_NET_FRAME_EXTENTS          |   1 +
+ src/x.c                                       |  18 ++
+ testcases/t/323-net-frame-extents.t           | 173 ++++++++++++++++++
+ 3 files changed, 192 insertions(+)
+ create mode 100644 release-notes/changes/5-set-_NET_FRAME_EXTENTS
+ create mode 100644 testcases/t/323-net-frame-extents.t
+
+diff --git a/release-notes/changes/5-set-_NET_FRAME_EXTENTS b/release-notes/changes/5-set-_NET_FRAME_EXTENTS
+new file mode 100644
+index 0000000000..0d40253a75
+--- /dev/null
++++ b/release-notes/changes/5-set-_NET_FRAME_EXTENTS
+@@ -0,0 +1 @@
++Set _NET_FRAME_EXTENTS according to the actual decoration size
+diff --git a/src/x.c b/src/x.c
+index e28c3d03b2..499c6e2330 100644
+--- a/src/x.c
++++ b/src/x.c
+@@ -1126,6 +1126,24 @@ void x_push_node(Con *con) {
+ 
+     set_shape_state(con, need_reshape);
+ 
++    /* Set _NET_FRAME_EXTENTS according to the actual decoration size. */
++    if (con != NULL && con->window != NULL) {
++        Rect bsr = con_border_style_rect(con);
++        Rect r = {
++            bsr.x,                 /* left */
++            0 - bsr.width - bsr.x, /* right */
++            bsr.y,                 /* top */
++            0 - bsr.height - bsr.y /* bottom */
++        };
++        xcb_change_property(
++            conn,
++            XCB_PROP_MODE_REPLACE,
++            con->window->id,
++            A__NET_FRAME_EXTENTS,
++            XCB_ATOM_CARDINAL, 32, 4,
++            &r);
++    }
++
+     /* Map if map state changed, also ensure that the child window
+      * is changed if we are mapped and there is a new, unmapped child window.
+      * Unmaps are handled in x_push_node_unmaps(). */
+diff --git a/testcases/t/323-net-frame-extents.t b/testcases/t/323-net-frame-extents.t
+new file mode 100644
+index 0000000000..7098f21d5f
+--- /dev/null
++++ b/testcases/t/323-net-frame-extents.t
+@@ -0,0 +1,173 @@
++#!perl
++# vim:ts=4:sw=4:expandtab
++#
++# Please read the following documents before working on tests:
++# • https://build.i3wm.org/docs/testsuite.html
++#   (or docs/testsuite)
++#
++# • https://build.i3wm.org/docs/lib-i3test.html
++#   (alternatively: perldoc ./testcases/lib/i3test.pm)
++#
++# • https://build.i3wm.org/docs/ipc.html
++#   (or docs/ipc)
++#
++# • https://i3wm.org/downloads/modern_perl_a4.pdf
++#   (unless you are already familiar with Perl)
++#
++# Verify _NET_FRAME_EXTENTS is set correctly
++# Ticket: #4292
++# Bug still in: 4.24-8-g44b67d11
++use i3test i3_autostart => 0;
++use X11::XCB qw(:all);
++
++my $pid = launch_with_config('-default');
++
++sub net_frame_extents {
++    my ($window) = @_;
++
++    my $cookie = $x->get_property(
++        0,
++        $window->{id},
++        $x->atom(name => '_NET_FRAME_EXTENTS')->id,
++        GET_PROPERTY_TYPE_ANY,
++        0,
++        4
++    );
++
++    my $reply = $x->get_property_reply($cookie->{sequence});
++    my $len = $reply->{length};
++    return [] if $len == 0;
++
++    return unpack("L$len", $reply->{value});
++}
++
++sub is_net_frame_extents {
++    my ($window, $expect, $msg) = @_;
++    $msg //= "";
++    $msg = "frame extents $msg";
++    $msg =~ s/\s+$//;
++    my @extents = net_frame_extents($window);
++    is_deeply(\@extents, $expect, "$msg: got: @extents want: @$expect");
++}
++
++subtest 'basic border styles' => sub {
++    my $w = open_window;
++    cmd 'border normal 3';
++    is_net_frame_extents($w, [3, 3, 18, 3], "normal border with 3px width");
++
++    cmd 'border pixel 1';
++    is_net_frame_extents($w, [1, 1, 1, 1], "pixel border with 1px width");
++
++    cmd 'border pixel 5';
++    is_net_frame_extents($w, [5, 5, 5, 5], "pixel border with 5px width");
++
++    open_window;
++    is_net_frame_extents($w, [5, 5, 5, 5], "other window does not affect");
++    cmd 'kill';
++
++    cmd 'border normal 0';
++    is_net_frame_extents($w, [0, 0, 18, 0], "normal border with 0px width");
++
++    cmd 'border none';
++    is_net_frame_extents($w, [0, 0, 0, 0], "no border");
++};
++
++subtest 'multiple windows in different layouts' => sub {
++    fresh_workspace;
++    
++    my $w1 = open_window;
++    my $w2 = open_window;
++    my $w3 = open_window;
++    
++    cmd 'border normal 2';
++    is_net_frame_extents($w1, [2, 2, 18, 2], "window 1 in splith layout with normal border");
++    is_net_frame_extents($w2, [2, 2, 18, 2], "window 2 in splith layout with normal border");
++    is_net_frame_extents($w3, [2, 2, 18, 2], "window 3 in splith layout with normal border");
++    
++    cmd 'layout stacking';
++    is_net_frame_extents($w1, [2, 2, 0, 2], "window 1 in stacking layout");
++    is_net_frame_extents($w2, [2, 2, 0, 2], "window 2 in stacking layout");
++    is_net_frame_extents($w3, [2, 2, 0, 2], "window 3 in stacking layout");
++    
++    cmd 'layout tabbed';
++    is_net_frame_extents($w1, [2, 2, 0, 2], "window 1 in tabbed layout");
++    is_net_frame_extents($w2, [2, 2, 0, 2], "window 2 in tabbed layout");
++    is_net_frame_extents($w3, [2, 2, 0, 2], "window 3 in tabbed layout");
++    
++    cmd 'layout splitv';
++    is_net_frame_extents($w1, [2, 2, 18, 2], "window 1 in splitv layout");
++    is_net_frame_extents($w2, [2, 2, 18, 2], "window 2 in splitv layout");
++    is_net_frame_extents($w3, [2, 2, 18, 2], "window 3 in splitv layout");
++};
++
++sub launch_with_hide_edge_borders {
++    my ($value) = @_;
++    my $config = <<EOT;
++# i3 config file (v4)
++font -misc-fixed-medium-r-normal--13-120-75-75-C-70-iso10646-1
++hide_edge_borders $value
++EOT
++
++    kill_all_windows;
++    exit_gracefully($pid);
++    $pid = launch_with_config($config);
++}
++
++subtest 'hide_edge_borders' => sub {
++    launch_with_hide_edge_borders('none');
++    my $w = open_window;
++    cmd 'border normal 3';
++    is_net_frame_extents($w, [3, 3, 18, 3], "window with normal borders (hide_edge_borders none)");
++
++    launch_with_hide_edge_borders('vertical');
++    $w = open_window;
++    cmd 'border normal 3';
++    is_net_frame_extents($w, [0, 0, 18, 3], "window with hidden vertical borders");
++
++    launch_with_hide_edge_borders('horizontal');
++    $w = open_window;
++    cmd 'border normal 3';
++    is_net_frame_extents($w, [3, 3, 18, 0], "window with hidden horizontal borders");
++    cmd 'border pixel 3';
++    is_net_frame_extents($w, [3, 3, 0, 0], "window with hidden horizontal borders");
++
++    launch_with_hide_edge_borders('both');
++    $w = open_window;
++    cmd 'border normal 3';
++    is_net_frame_extents($w, [0, 0, 18, 0], "window with all edge borders hidden");
++    cmd 'border pixel 3';
++    is_net_frame_extents($w, [0, 0, 0, 0], "window with all edge borders hidden");
++
++    launch_with_hide_edge_borders('smart');
++    $w = open_window;
++    cmd 'border normal 3';
++    is_net_frame_extents($w, [0, 0, 18, 0], "window with smart borders (single window)");
++    cmd 'border pixel 3';
++    is_net_frame_extents($w, [0, 0, 0, 0], "window with smart borders (single window)");
++    
++    my $w2 = open_window;
++    cmd 'border normal 5';
++    is_net_frame_extents($w, [3, 3, 3, 3], "first window with smart borders (multiple windows)");
++    is_net_frame_extents($w2, [5, 5, 18, 5], "second window with smart borders (multiple windows)");
++
++    exit_gracefully($pid);
++    launch_with_config('-default');
++};
++
++subtest 'floating windows' => sub {
++    fresh_workspace;
++    my $w = open_window;
++    cmd 'border normal 4';
++    is_net_frame_extents($w, [4, 4, 18, 4], "tiling window with normal border");
++    
++    cmd 'floating enable';
++    is_net_frame_extents($w, [4, 4, 18, 4], "floating window with normal border");
++    
++    cmd 'border pixel 2';
++    is_net_frame_extents($w, [2, 2, 2, 2], "floating window with pixel border");
++    
++    cmd 'border none';
++    is_net_frame_extents($w, [0, 0, 0, 0], "floating window with no border");
++};
++
++done_testing;

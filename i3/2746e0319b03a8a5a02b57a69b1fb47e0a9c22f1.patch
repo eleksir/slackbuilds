@@ -1,0 +1,25 @@
+From 2746e0319b03a8a5a02b57a69b1fb47e0a9c22f1 Mon Sep 17 00:00:00 2001
+From: Michael Stapelberg <michael@stapelberg.de>
+Date: Wed, 6 Nov 2024 19:17:37 +0100
+Subject: [PATCH] i3bar: work around weird clang compiler behavior
+
+clang used to not warn (= error, with -Werror) about this line. Oh well.
+---
+ i3bar/src/xcb.c | 4 +++-
+ 1 file changed, 3 insertions(+), 1 deletion(-)
+
+diff --git a/i3bar/src/xcb.c b/i3bar/src/xcb.c
+index 4211123d44..f975826abf 100644
+--- a/i3bar/src/xcb.c
++++ b/i3bar/src/xcb.c
+@@ -1515,7 +1515,9 @@ static void send_tray_clientmessage(void) {
+ static void init_tray(void) {
+     DLOG("Initializing system tray functionality\n");
+     /* request the tray manager atom for the X11 display we are running on */
+-    char atomname[strlen("_NET_SYSTEM_TRAY_S") + 11];
++    /* The following line cannot use strlen as that makes compilation fail with
++     * some versions of clang (-Wgnu-folding-constant): */
++    char atomname[18 /* strlen("_NET_SYSTEM_TRAY_S") */ + 11];
+     snprintf(atomname, strlen("_NET_SYSTEM_TRAY_S") + 11, "_NET_SYSTEM_TRAY_S%d", screen);
+     xcb_intern_atom_cookie_t tray_cookie;
+     if (tray_reply == NULL) {

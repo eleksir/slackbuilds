@@ -1,0 +1,30 @@
+From 853b0d9161a5f99c8491751590229a449e4076b6 Mon Sep 17 00:00:00 2001
+From: Michael Stapelberg <stapelberg@users.noreply.github.com>
+Date: Mon, 30 Dec 2024 08:29:29 +0100
+Subject: [PATCH] i3bar: fix clang compilation error by using const size_t
+ (#6349)
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Thanks to Shouη (@Shoun2137 on GitHub) for the suggestion.
+---
+ i3bar/src/xcb.c | 5 +++--
+ 1 file changed, 3 insertions(+), 2 deletions(-)
+
+diff --git a/i3bar/src/xcb.c b/i3bar/src/xcb.c
+index f975826abf..146db172e3 100644
+--- a/i3bar/src/xcb.c
++++ b/i3bar/src/xcb.c
+@@ -1517,8 +1517,9 @@ static void init_tray(void) {
+     /* request the tray manager atom for the X11 display we are running on */
+     /* The following line cannot use strlen as that makes compilation fail with
+      * some versions of clang (-Wgnu-folding-constant): */
+-    char atomname[18 /* strlen("_NET_SYSTEM_TRAY_S") */ + 11];
+-    snprintf(atomname, strlen("_NET_SYSTEM_TRAY_S") + 11, "_NET_SYSTEM_TRAY_S%d", screen);
++    const size_t systray_len = strlen("_NET_SYSTEM_TRAY_S") + 11;
++    char atomname[systray_len];
++    snprintf(atomname, systray_len, "_NET_SYSTEM_TRAY_S%d", screen);
+     xcb_intern_atom_cookie_t tray_cookie;
+     if (tray_reply == NULL) {
+         tray_cookie = xcb_intern_atom(xcb_connection, 0, strlen(atomname), atomname);
