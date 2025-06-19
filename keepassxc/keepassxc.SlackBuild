@@ -24,7 +24,7 @@
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 PRGNAM=keepassxc
-VERSION=${VERSION:-2.7.9}
+VERSION=${VERSION:-2.7.10}
 BUILD=${BUILD:-1}
 TAG=${TAG:-_EXs}
 
@@ -75,7 +75,7 @@ cd build
   export CFLAGS="$SLKCFLAGS"
   export CXXFLAGS="$CFLAGS -fvectorize -fno-rtti"
   export LDFLAGS="-ltermcap -flto -rdynamic -Wl,--export-dynamic -Wl,-E -Wl,--no-as-needed -Wl,-s "
-  cmake \
+  cmake -GNinja \
     -DCMAKE_C_FLAGS:STRING="$CFLAGS" \
     -DCMAKE_CXX_FLAGS:STRING="$CFLAGS" \
     -DCMAKE_INSTALL_PREFIX=/usr \
@@ -96,8 +96,8 @@ cd build
     -DWITH_APP_BUNDLE=OFF \
     ..
 
-  make -j$(nproc)
-  make install DESTDIR=$PKG
+  ninja -j$(nproc)
+  DESTDIR=$PKG ninja install
 cd ..
 
 find $PKG -print0 | xargs -0 file | grep -e "executable" -e "shared object" | grep ELF \
