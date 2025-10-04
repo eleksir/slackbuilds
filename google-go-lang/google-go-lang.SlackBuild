@@ -29,13 +29,14 @@
 # SOFTWARE.
 
 PRGNAM=google-go-lang
-VERSION=${VERSION:-1.24.2}
+VERSION=${VERSION:-1.25.1}
 BOOTSTRAP0_VERSION=1.4-bootstrap-20171003
 BOOTSTRAP1_VERSION=1.18.10
 BOOTSTRAP2_VERSION=1.21.13
 BOOTSTRAP3_VERSION=1.22.10
 BOOTSTRAP4_VERSION=1.23.8
-BOOTSTRAP5_VERSION=$VERSION
+BOOTSTRAP5_VERSION=1.24.7
+BOOTSTRAP6_VERSION=$VERSION
 BUILD=${BUILD:-1}
 TAG=${TAG:-_EXs}
 
@@ -67,7 +68,7 @@ else
 fi
 
 CWD=$(pwd)
-TMP=${TMP:-/tmp/SBo}
+TMP=${TMP:-/tmp/EXs}
 PKG=$TMP/package-$PRGNAM
 OUTPUT=${OUTPUT:-/tmp}
 BOOTSTRAP0_DIR="${TMP}/bootstrap-go${BOOTSTRAP0_VERSION}"
@@ -76,6 +77,7 @@ BOOTSTRAP2_DIR="${TMP}/bootstrap-go${BOOTSTRAP2_VERSION}"
 BOOTSTRAP3_DIR="${TMP}/bootstrap-go${BOOTSTRAP3_VERSION}"
 BOOTSTRAP4_DIR="${TMP}/bootstrap-go${BOOTSTRAP4_VERSION}"
 BOOTSTRAP5_DIR="${TMP}/bootstrap-go${BOOTSTRAP5_VERSION}"
+BOOTSTRAP6_DIR="${TMP}/bootstrap-go${BOOTSTRAP6_VERSION}"
 
 set -e
 
@@ -94,7 +96,7 @@ find -L . \
 
 ORIG_PATH="${PATH}"
 
-export MAKEFLAGS="-j 16"
+export MAKEFLAGS="-j $(nproc)"
 
 echo ""
 echo "Building 0-th bootstrap compiler, ${BOOTSTRAP0_VERSION}"
@@ -213,14 +215,34 @@ pushd "$BOOTSTRAP5_DIR"
 	popd
 popd
 
+# Time to build 6-th bootstrap compiler
+echo ""
+echo "Building 6-th bootstrap compiler, ${BOOTSTRAP6_VERSION}"
+mkdir -p "${BOOTSTRAP6_DIR}"
+pushd "$BOOTSTRAP6_DIR"
+	tar xf "${CWD}/go${BOOTSTRAP6_VERSION}.src.tar.gz"
+	pushd go
+		chown -R root:root .
+		export PATH="${BOOTSTRAP5_DIR}/go/bin:${ORIG_PATH}"
+		unset GOBIN GOPATH GOOS GOARCH CGO_ENABLED
+		export GOROOT_BOOTSTRAP="$BOOTSTRAP5_DIR/go"
+		export GOROOT="$(pwd)"
+		export GOROOT_FINAL="${BOOTSTRAP6_DIR}/go"
+		pushd src
+			LC_ALL=C ./make.bash
+			$GOROOT/bin/go install -buildmode=exe std
+		popd
+	popd
+popd
+
 
 # Time to build target compiler
 echo ""
-echo "Building target compiler, ${BOOTSTRAP5_VERSION}"
-export PATH="${BOOTSTRAP5_DIR}/go/bin:${PATH}"
+echo "Building target compiler, ${BOOTSTRAP6_VERSION}"
+export PATH="${BOOTSTRAP6_DIR}/go/bin:${PATH}"
 cd "$PKG/usr/lib${LIBDIRSUFFIX}/go${VERSION}/go"
 unset GOBIN GOPATH GOOS GOARCH CGO_ENABLED
-export GOROOT_BOOTSTRAP="$BOOTSTRAP5_DIR/go"
+export GOROOT_BOOTSTRAP="$BOOTSTRAP6_DIR/go"
 export GOROOT="$(pwd)"
 export GOROOT_FINAL="/usr/lib${LIBDIRSUFFIX}/go${VERSION}/go"
 export GO_LDFLAGS="-s -w"
