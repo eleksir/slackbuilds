@@ -25,7 +25,7 @@
 
 PRGNAM=keepassxc
 VERSION=${VERSION:-2.7.10}
-BUILD=${BUILD:-1}
+BUILD=${BUILD:-2}
 TAG=${TAG:-_EXs}
 
 if [ -z "$ARCH" ]; then
@@ -74,7 +74,7 @@ mkdir -p build
 cd build
   export CFLAGS="$SLKCFLAGS"
   export CXXFLAGS="$CFLAGS -fvectorize -fno-rtti"
-  export LDFLAGS="-ltermcap -flto -rdynamic -Wl,--export-dynamic -Wl,-E -Wl,--no-as-needed -Wl,-s "
+  export LDFLAGS="-ltermcap -rdynamic -Wl,--export-dynamic -Wl,-E -Wl,--no-as-needed -Wl,-s -Wl,-O2 "
   cmake -GNinja \
     -DCMAKE_C_FLAGS:STRING="$CFLAGS" \
     -DCMAKE_CXX_FLAGS:STRING="$CFLAGS" \
